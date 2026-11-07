@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="MW3 Mod Manager"
-        Width="820" Height="980" MinWidth="700" MinHeight="600"
+        Width="820" Height="960" MinWidth="700" MinHeight="600"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource Bg}"
         FontFamily="Segoe UI"
@@ -194,6 +194,48 @@
                                                Style="{StaticResource Subtext}" Opacity="0.7" Margin="0,2,0,0" />
                                 </StackPanel>
                             </DockPanel>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <Grid x:Name="RecoilPanel">
+                        <StackPanel>
+                            <DockPanel>
+                                <StackPanel>
+                                    <TextBlock Text="Weapon feel" Style="{StaticResource Section}" />
+                                    <TextBlock Text="How far the gun itself kicks when you fire. The camera keeps its own recoil."
+                                               Style="{StaticResource Subtext}" Margin="0,2,0,0" />
+                                </StackPanel>
+                            </DockPanel>
+
+                            <DockPanel Margin="0,18,0,0">
+                                <CheckBox x:Name="RecoilSwitch" DockPanel.Dock="Right" Content="Applied"
+                                          Style="{StaticResource Switch}" VerticalAlignment="Center"
+                                          Checked="Recoil_Changed" Unchecked="Recoil_Changed" />
+                                <TextBlock Text="Visual recoil" Style="{StaticResource Subtext}"
+                                           VerticalAlignment="Center" />
+                            </DockPanel>
+
+                            <Grid Margin="0,10,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Strength" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
+                                <TextBlock x:Name="RecoilValueText" Grid.Column="1" Text="100%"
+                                           Style="{StaticResource Value}" MinWidth="76" />
+                            </Grid>
+                            <Slider x:Name="RecoilSlider" Minimum="0" Maximum="100"
+                                    TickFrequency="5" IsSnapToTickEnabled="True"
+                                    Style="{StaticResource Slider}" VerticalAlignment="Center"
+                                    ValueChanged="RecoilSlider_ValueChanged" />
+                            <DockPanel Margin="0,2,0,0">
+                                <TextBlock DockPanel.Dock="Right" Text="100%" Style="{StaticResource Subtext}" />
+                                <TextBlock Text="0%" Style="{StaticResource Subtext}" />
+                            </DockPanel>
+
+                            <TextBlock x:Name="RecoilHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
                         </StackPanel>
                     </Grid>
                 </Border>

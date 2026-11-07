@@ -46,6 +46,8 @@ public partial class MainWindow : Window
         FlinchSlider.Value = Math.Clamp(_config.FlinchStrength * 100f, 0f, 100f);
         FlinchSwitch.IsChecked = _config.FlinchEnabled;
         BlurSwitch.IsChecked = _config.BlurEnabled;
+        RecoilSlider.Value = Math.Clamp(_config.RecoilStrength * 100f, 0f, 100f);
+        RecoilSwitch.IsChecked = _config.RecoilEnabled;
         _loading = false;
 
         if (!File.Exists(ModConfig.SettingsPath))
@@ -152,6 +154,15 @@ public partial class MainWindow : Window
             : _config.FlinchStrength <= 0.001f
                 ? "No view kick at all when you take damage."
                 : "Damage kicks the view less, and the minimum kick shrinks with it.";
+
+        RecoilPanel.IsEnabled = runtime;
+        RecoilPanel.Opacity = runtime ? 1.0 : 0.45;
+        RecoilValueText.Text = Math.Round(RecoilSlider.Value).ToString("0") + "%";
+        RecoilHint.Text = _config.RecoilStrength >= 0.999f
+            ? "Stock. The gun kicks exactly as it always did."
+            : _config.RecoilStrength <= 0.001f
+                ? "The gun does not kick when you fire."
+                : "The gun kicks less when you fire.";
     }
 
     private void RefreshStatus()
@@ -221,6 +232,21 @@ public partial class MainWindow : Window
     {
         if (_loading) return;
         _config.BlurEnabled = BlurSwitch.IsChecked == true;
+        SaveLater();
+    }
+
+    private void RecoilSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_loading) return;
+        _config.RecoilStrength = (float)Math.Round(e.NewValue) / 100f;
+        UpdateFovUi();
+        SaveLater();
+    }
+
+    private void Recoil_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        _config.RecoilEnabled = RecoilSwitch.IsChecked == true;
         SaveLater();
     }
 

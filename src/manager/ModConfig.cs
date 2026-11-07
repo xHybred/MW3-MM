@@ -24,6 +24,9 @@ public sealed class ModConfig
     public bool BlurEnabled { get; set; } = true;
     public float BlurStrength { get; set; } = 1.0f;
     public bool BlurDebug { get; set; }
+    public bool RecoilEnabled { get; set; } = true;
+    public float RecoilStrength { get; set; } = 1.0f;
+    public bool RecoilDebug { get; set; }
     public bool LogEffectiveFov { get; set; }
     public bool DvarScan { get; set; }
 
@@ -103,6 +106,17 @@ public sealed class ModConfig
                         break;
                 }
             }
+            else if (section.Equals("Recoil", StringComparison.OrdinalIgnoreCase))
+            {
+                switch (key.ToLowerInvariant())
+                {
+                    case "enabled": config.RecoilEnabled = ParseBool(value, config.RecoilEnabled); break;
+                    case "strength":
+                        if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float recoilStrength))
+                            config.RecoilStrength = Math.Clamp(recoilStrength, 0f, 1f);
+                        break;
+                }
+            }
             else if (section.Equals("Debug", StringComparison.OrdinalIgnoreCase))
             {
                 switch (key.ToLowerInvariant())
@@ -110,6 +124,7 @@ public sealed class ModConfig
                     case "logeffectivefov": config.LogEffectiveFov = ParseBool(value, config.LogEffectiveFov); break;
                     case "dvarscan": config.DvarScan = ParseBool(value, config.DvarScan); break;
                     case "blurcalls": config.BlurDebug = ParseBool(value, config.BlurDebug); break;
+                    case "recoil": config.RecoilDebug = ParseBool(value, config.RecoilDebug); break;
                 }
             }
         }
@@ -140,9 +155,14 @@ public sealed class ModConfig
             $"Enabled={(BlurEnabled ? 1 : 0)}",
             "Strength=" + BlurStrength.ToString("0.###", CultureInfo.InvariantCulture),
             "",
+            "[Recoil]",
+            $"Enabled={(RecoilEnabled ? 1 : 0)}",
+            "Strength=" + RecoilStrength.ToString("0.###", CultureInfo.InvariantCulture),
+            "",
             "[Debug]",
             $"LogEffectiveFov={(LogEffectiveFov ? 1 : 0)}",
             $"DvarScan={(DvarScan ? 1 : 0)}",
+            $"Recoil={(RecoilDebug ? 1 : 0)}",
             "",
         });
 

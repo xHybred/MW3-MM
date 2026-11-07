@@ -41,6 +41,9 @@ bool LoadSettings(ModSettings& out) {
     out.blurEnabled = GetPrivateProfileIntW(L"Blur", L"Enabled", 1, path.c_str()) != 0;
     out.blurStrength = Clamp01(ReadFloatKey(path, L"Blur", L"Strength", 1.0f));
     out.blurDebug = GetPrivateProfileIntW(L"Debug", L"BlurCalls", 0, path.c_str()) != 0;
+    out.recoilEnabled = GetPrivateProfileIntW(L"Recoil", L"Enabled", 1, path.c_str()) != 0;
+    out.recoilStrength = Clamp01(ReadFloatKey(path, L"Recoil", L"Strength", 1.0f));
+    out.recoilDebug = GetPrivateProfileIntW(L"Debug", L"Recoil", 0, path.c_str()) != 0;
     out.logEffectiveFov = GetPrivateProfileIntW(L"Debug", L"LogEffectiveFov", 0, path.c_str()) != 0;
     out.dvarScanVerbose = GetPrivateProfileIntW(L"Debug", L"DvarScan", 0, path.c_str()) != 0;
     return true;

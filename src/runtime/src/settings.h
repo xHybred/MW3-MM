@@ -14,6 +14,9 @@ struct ModSettings {
     bool blurEnabled = true;
     float blurStrength = 1.0f;
     bool blurDebug = false;
+    bool recoilEnabled = true;
+    float recoilStrength = 1.0f;
+    bool recoilDebug = false;
     bool logEffectiveFov = false;
     bool dvarScanVerbose = false;
 };

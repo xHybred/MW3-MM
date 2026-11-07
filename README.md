@@ -40,6 +40,10 @@ Strength=1
 [Blur]
 Enabled=1
 Strength=1
+
+[Recoil]
+Enabled=1
+Strength=1
 ```
 
 **Remove** in the manager (or deleting that one DLL) puts the game back to vanilla.
@@ -61,6 +65,8 @@ apply without a restart.
 | `[Flinch] Strength` | 0..1, how hard damage kicks the view. 1 = stock, 0 = no kick |
 | `[Blur] Enabled` | 1 leaves the blur that lands with a hit, 0 removes it |
 | `[Blur] Strength` | 0..1, how heavy that blur is. 1 = stock, 0 = the same as Enabled=0 |
+| `[Recoil] Enabled` | 1 scales the gun's own kick, 0 leaves the weapon data alone |
+| `[Recoil] Strength` | 0..1, how far the gun kicks when you fire. 1 = stock, 0 = no kick |
 | `[Debug] LogEffectiveFov` | log each weapon's aim FOV when it changes |
 | `[Debug] DvarScan` | log every step of the dvar lookup |
 
@@ -114,6 +120,13 @@ registered settings touches it. The scripts call `setBlur`, which lands in the e
 `[Blur] Enabled=0` every call goes through with a radius of zero, so the fade still runs and
 the picture stays sharp. Because it is the same entry point the scripts use for any blur,
 scripted moments lose their blur too.
+
+Weapon recoil is per weapon data, not a dvar, so the runtime reads the loaded `WeaponCompleteDef`
+the engine already hands it for the aiming FOV, follows it to the `WeaponDef` behind it, and
+scales the four kick amplitudes there (ADS and hipfire pitch and yaw). Accel, speed and decay
+stay untouched, so the gun keeps its firing rhythm and only travels less far. Values are
+recorded per weapon the first time it is seen, so switching or picking a weapon up never
+compounds the scaling.
 
 ## Build
 

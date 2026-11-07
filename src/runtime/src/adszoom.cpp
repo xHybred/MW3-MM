@@ -9,6 +9,7 @@
 #include "MinHook.h"
 #include "log.h"
 #include "settings.h"
+#include "weapon.h"
 
 namespace adszoom {
 namespace {
@@ -54,6 +55,8 @@ void LogIfChanged(float vanilla, float patched) {
 
 float HookedWeaponFov(int clientNum, int flag) {
     const float vanilla = g_original(clientNum, flag);
+
+    weapon::ApplyFromClient(clientNum);
 
     if (!g_enabled.load(std::memory_order_relaxed)) return vanilla;
     if (!(vanilla > 0.5f) || vanilla > 179.0f) return vanilla;
