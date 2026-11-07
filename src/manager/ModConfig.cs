@@ -31,6 +31,8 @@ public sealed class ModConfig
     public bool SwayEnabled { get; set; } = true;
     public float SwayStrength { get; set; } = 1.0f;
     public bool FlashEnabled { get; set; } = true;
+    public bool ViewmodelEnabled { get; set; } = true;
+    public float ViewmodelInfluence { get; set; } = 1.0f;
     public bool LogEffectiveFov { get; set; }
     public bool DvarScan { get; set; }
 
@@ -137,6 +139,17 @@ public sealed class ModConfig
                 if (key.ToLowerInvariant() == "enabled")
                     config.FlashEnabled = ParseBool(value, config.FlashEnabled);
             }
+            else if (section.Equals("Viewmodel", StringComparison.OrdinalIgnoreCase))
+            {
+                switch (key.ToLowerInvariant())
+                {
+                    case "enabled": config.ViewmodelEnabled = ParseBool(value, config.ViewmodelEnabled); break;
+                    case "influence":
+                        if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float influence))
+                            config.ViewmodelInfluence = Math.Clamp(influence, 0f, 2f);
+                        break;
+                }
+            }
             else if (section.Equals("Debug", StringComparison.OrdinalIgnoreCase))
             {
                 switch (key.ToLowerInvariant())
@@ -185,6 +198,10 @@ public sealed class ModConfig
             "",
             "[Flash]",
             $"Enabled={(FlashEnabled ? 1 : 0)}",
+            "",
+            "[Viewmodel]",
+            $"Enabled={(ViewmodelEnabled ? 1 : 0)}",
+            "Influence=" + ViewmodelInfluence.ToString("0.###", CultureInfo.InvariantCulture),
             "",
             "[Debug]",
             $"LogEffectiveFov={(LogEffectiveFov ? 1 : 0)}",

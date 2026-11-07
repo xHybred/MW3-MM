@@ -51,6 +51,10 @@ Strength=1
 
 [Flash]
 Enabled=1
+
+[Viewmodel]
+Enabled=1
+Influence=1
 ```
 
 **Remove** in the manager (or deleting that one DLL) puts the game back to vanilla.
@@ -77,6 +81,8 @@ apply without a restart.
 | `[Sway] Enabled` | 1 scales how far the gun drifts while aiming and moving, 0 leaves it untouched |
 | `[Sway] Strength` | 0..1, how far the gun drifts. 1 = stock, 0 = no drift |
 | `[Flash] Enabled` | 1 leaves the muzzle flash and its smoke puff, 0 removes both |
+| `[Viewmodel] Enabled` | 1 lets the runtime adjust how much the gun shrinks with field of view, 0 leaves it alone |
+| `[Viewmodel] Influence` | 0..2, how much the gun follows your field of view. 1 = stock, 0 = the gun keeps its size, 2 = it shrinks twice as fast |
 | `[Debug] LogEffectiveFov` | log each weapon's aim FOV when it changes |
 | `[Debug] DvarScan` | log every step of the dvar lookup |
 
@@ -149,6 +155,14 @@ The muzzle flash is an effect asset per weapon (`viewFlashEffect`, a pointer at 
 definition). Nothing in the game exposes it as a setting, so the runtime clears that pointer when the
 toggle is off and puts it back when it is on. The smoke puff at the barrel comes from the same asset,
 so both go together. A null effect pointer is safe; the engine simply spawns nothing.
+
+The gun is placed relative to the camera with a forward offset along the view axis, applied in
+`iw5sp.exe+0x6FD70` (the same `cg_gun_z` the console exposes). Because the gun sits at the camera and
+extends forward, moving it along that axis changes its apparent size without touching the world. The
+runtime adds `offset = 3.5 * (1 - 1/k)` with `k = (tan(fov/2) / tan(pivot/2))^(1 - influence)`, so at
+influence 1 the offset is zero and nothing is written; 0 cancels the shrink entirely; values above 1
+push the gun further than stock. The offset is faded out by the aim fraction so aiming is untouched,
+and clamped to three units so the gun cannot pass through the camera or clip into the world.
 
 ## Build
 

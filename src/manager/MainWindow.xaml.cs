@@ -51,6 +51,8 @@ public partial class MainWindow : Window
         SwaySlider.Value = Math.Clamp(_config.SwayStrength * 100f, 0f, 100f);
         SwaySwitch.IsChecked = _config.SwayEnabled;
         FlashSwitch.IsChecked = _config.FlashEnabled;
+        ViewmodelSlider.Value = Math.Clamp(_config.ViewmodelInfluence * 100f, 0f, 200f);
+        ViewmodelSwitch.IsChecked = _config.ViewmodelEnabled;
         _loading = false;
 
         if (!File.Exists(ModConfig.SettingsPath))
@@ -177,6 +179,15 @@ public partial class MainWindow : Window
         FlashHint.Text = _config.FlashEnabled
             ? "Stock. The flash and the smoke puff stay."
             : "No flash and no smoke puff when you fire.";
+
+        ViewmodelValueText.Text = Math.Round(ViewmodelSlider.Value).ToString("0") + "%";
+        ViewmodelHint.Text = _config.ViewmodelInfluence >= 0.999f && _config.ViewmodelInfluence <= 1.001f
+            ? "Stock. The gun shrinks with your field of view exactly as it always did."
+            : _config.ViewmodelInfluence <= 0.001f
+                ? "The gun keeps its size as your field of view changes."
+                : _config.ViewmodelInfluence < 1f
+                    ? "The gun shrinks less than stock as your field of view rises."
+                    : "The gun shrinks more than stock as your field of view rises.";
     }
 
     private void RefreshStatus()
@@ -283,6 +294,22 @@ public partial class MainWindow : Window
     {
         if (_loading) return;
         _config.FlashEnabled = FlashSwitch.IsChecked == true;
+        UpdateFovUi();
+        SaveLater();
+    }
+
+    private void ViewmodelSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_loading) return;
+        _config.ViewmodelInfluence = (float)Math.Round(e.NewValue) / 100f;
+        UpdateFovUi();
+        SaveLater();
+    }
+
+    private void Viewmodel_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        _config.ViewmodelEnabled = ViewmodelSwitch.IsChecked == true;
         UpdateFovUi();
         SaveLater();
     }
