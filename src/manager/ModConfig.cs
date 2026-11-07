@@ -27,6 +27,9 @@ public sealed class ModConfig
     public bool RecoilEnabled { get; set; } = true;
     public float RecoilStrength { get; set; } = 1.0f;
     public bool RecoilDebug { get; set; }
+
+    public bool SwayEnabled { get; set; } = true;
+    public float SwayStrength { get; set; } = 1.0f;
     public bool LogEffectiveFov { get; set; }
     public bool DvarScan { get; set; }
 
@@ -117,6 +120,17 @@ public sealed class ModConfig
                         break;
                 }
             }
+            else if (section.Equals("Sway", StringComparison.OrdinalIgnoreCase))
+            {
+                switch (key.ToLowerInvariant())
+                {
+                    case "enabled": config.SwayEnabled = ParseBool(value, config.SwayEnabled); break;
+                    case "strength":
+                        if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float swayStrength))
+                            config.SwayStrength = Math.Clamp(swayStrength, 0f, 1f);
+                        break;
+                }
+            }
             else if (section.Equals("Debug", StringComparison.OrdinalIgnoreCase))
             {
                 switch (key.ToLowerInvariant())
@@ -158,6 +172,10 @@ public sealed class ModConfig
             "[Recoil]",
             $"Enabled={(RecoilEnabled ? 1 : 0)}",
             "Strength=" + RecoilStrength.ToString("0.###", CultureInfo.InvariantCulture),
+            "",
+            "[Sway]",
+            $"Enabled={(SwayEnabled ? 1 : 0)}",
+            "Strength=" + SwayStrength.ToString("0.###", CultureInfo.InvariantCulture),
             "",
             "[Debug]",
             $"LogEffectiveFov={(LogEffectiveFov ? 1 : 0)}",

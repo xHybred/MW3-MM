@@ -44,6 +44,10 @@ Strength=1
 [Recoil]
 Enabled=1
 Strength=1
+
+[Sway]
+Enabled=1
+Strength=1
 ```
 
 **Remove** in the manager (or deleting that one DLL) puts the game back to vanilla.
@@ -67,6 +71,8 @@ apply without a restart.
 | `[Blur] Strength` | 0..1, how heavy that blur is. 1 = stock, 0 = the same as Enabled=0 |
 | `[Recoil] Enabled` | 1 scales the gun's own kick, 0 leaves the weapon data alone |
 | `[Recoil] Strength` | 0..1, how far the gun kicks when you fire. 1 = stock, 0 = no kick |
+| `[Sway] Enabled` | 1 scales how far the gun drifts while aiming and moving, 0 leaves the weapon data alone |
+| `[Sway] Strength` | 0..1, how far the gun drifts. 1 = stock, 0 = no drift |
 | `[Debug] LogEffectiveFov` | log each weapon's aim FOV when it changes |
 | `[Debug] DvarScan` | log every step of the dvar lookup |
 
@@ -127,6 +133,10 @@ scales the four kick amplitudes there (ADS and hipfire pitch and yaw). Accel, sp
 stay untouched, so the gun keeps its firing rhythm and only travels less far. Values are
 recorded per weapon the first time it is seen, so switching or picking a weapon up never
 compounds the scaling.
+
+Weapon sway uses the same weapon definition. The runtime scales `swayMaxAngle` (hipfire) and
+`adsSwayMaxAngle` (aiming), which set how far the gun drifts. The other sway fields are left
+alone.
 
 ## Build
 

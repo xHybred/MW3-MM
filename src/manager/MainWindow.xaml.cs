@@ -48,6 +48,8 @@ public partial class MainWindow : Window
         BlurSwitch.IsChecked = _config.BlurEnabled;
         RecoilSlider.Value = Math.Clamp(_config.RecoilStrength * 100f, 0f, 100f);
         RecoilSwitch.IsChecked = _config.RecoilEnabled;
+        SwaySlider.Value = Math.Clamp(_config.SwayStrength * 100f, 0f, 100f);
+        SwaySwitch.IsChecked = _config.SwayEnabled;
         _loading = false;
 
         if (!File.Exists(ModConfig.SettingsPath))
@@ -163,6 +165,13 @@ public partial class MainWindow : Window
             : _config.RecoilStrength <= 0.001f
                 ? "The gun does not kick when you fire."
                 : "The gun kicks less when you fire.";
+
+        SwayValueText.Text = Math.Round(SwaySlider.Value).ToString("0") + "%";
+        SwayHint.Text = _config.SwayStrength >= 0.999f
+            ? "Stock. The gun drifts exactly as it always did."
+            : _config.SwayStrength <= 0.001f
+                ? "The gun does not drift."
+                : "The gun drifts less.";
     }
 
     private void RefreshStatus()
@@ -247,6 +256,21 @@ public partial class MainWindow : Window
     {
         if (_loading) return;
         _config.RecoilEnabled = RecoilSwitch.IsChecked == true;
+        SaveLater();
+    }
+
+    private void SwaySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_loading) return;
+        _config.SwayStrength = (float)Math.Round(e.NewValue) / 100f;
+        UpdateFovUi();
+        SaveLater();
+    }
+
+    private void Sway_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        _config.SwayEnabled = SwaySwitch.IsChecked == true;
         SaveLater();
     }
 

@@ -27,19 +27,22 @@ namespace
     struct Field
     {
         size_t offset;
+        bool sway;
     };
 
-    // Amplitudes only. Accel, speed and decay stay native so the kick keeps its
-    // original timing and only travels less far.
+    // Kick amplitudes and sway limits. Accel, speed and decay stay native so the
+    // kick keeps its original timing and only travels less far.
     constexpr Field kFields[] = {
-        {0x72C},  // ads pitch min
-        {0x730},  // ads pitch max
-        {0x734},  // ads yaw min
-        {0x738},  // ads yaw max
-        {0x770},  // hip pitch min
-        {0x774},  // hip pitch max
-        {0x778},  // hip yaw min
-        {0x77C},  // hip yaw max
+        {0x72C, false},  // ads pitch min
+        {0x730, false},  // ads pitch max
+        {0x734, false},  // ads yaw min
+        {0x738, false},  // ads yaw max
+        {0x770, false},  // hip pitch min
+        {0x774, false},  // hip pitch max
+        {0x778, false},  // hip yaw min
+        {0x77C, false},  // hip yaw max
+        {0x5E8, true},   // swayMaxAngle, hipfire
+        {0x604, true},   // adsSwayMaxAngle
     };
     constexpr size_t kFieldCount = sizeof(kFields) / sizeof(kFields[0]);
     constexpr size_t kDefSlots = 64;
@@ -57,6 +60,8 @@ namespace
 
     std::atomic<bool> g_enabled{true};
     std::atomic<float> g_strength{1.0f};
+    std::atomic<bool> g_swayEnabled{true};
+    std::atomic<float> g_swayStrength{1.0f};
     std::atomic<bool> g_log{false};
     std::atomic<bool> g_reportedClient{false};
 
@@ -115,6 +120,7 @@ namespace
                  slot->vanilla[0], slot->vanilla[1], slot->vanilla[2], slot->vanilla[3]);
             LogF(L"weapon:   hip pitch %.3f..%.3f yaw %.3f..%.3f", slot->vanilla[4],
                  slot->vanilla[5], slot->vanilla[6], slot->vanilla[7]);
+            LogF(L"weapon:   sway max hip %.3f ads %.3f", slot->vanilla[8], slot->vanilla[9]);
         }
         return slot;
     }
@@ -159,14 +165,17 @@ void weapon::ApplyFromClient(int clientNum)
     if (!slot)
         return;
 
-    const float strength = g_enabled.load(std::memory_order_relaxed)
-                               ? g_strength.load(std::memory_order_relaxed)
-                               : 1.0f;
+    const float kickStrength = g_enabled.load(std::memory_order_relaxed)
+                                   ? g_strength.load(std::memory_order_relaxed)
+                                   : 1.0f;
+    const float swayStrength = g_swayEnabled.load(std::memory_order_relaxed)
+                                   ? g_swayStrength.load(std::memory_order_relaxed)
+                                   : 1.0f;
 
     auto* base = static_cast<unsigned char*>(weaponDef);
     for (size_t i = 0; i < kFieldCount; ++i)
     {
-        const float wanted = slot->vanilla[i] * strength;
+        const float wanted = slot->vanilla[i] * (kFields[i].sway ? swayStrength : kickStrength);
         auto* value = reinterpret_cast<float*>(base + kFields[i].offset);
         if (std::fabs(*value - wanted) > 0.0005f)
         {
@@ -182,5 +191,7 @@ void weapon::Update(const ModSettings& settings)
 {
     g_enabled.store(settings.recoilEnabled, std::memory_order_relaxed);
     g_strength.store(settings.recoilStrength, std::memory_order_relaxed);
+    g_swayEnabled.store(settings.swayEnabled, std::memory_order_relaxed);
+    g_swayStrength.store(settings.swayStrength, std::memory_order_relaxed);
     g_log.store(settings.recoilDebug, std::memory_order_relaxed);
 }

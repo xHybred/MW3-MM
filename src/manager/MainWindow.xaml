@@ -236,6 +236,39 @@
                             </DockPanel>
 
                             <TextBlock x:Name="RecoilHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
+
+                            <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,16,0,14" />
+
+                            <DockPanel>
+                                <CheckBox x:Name="SwaySwitch" DockPanel.Dock="Right" Content="Applied"
+                                          Style="{StaticResource Switch}" VerticalAlignment="Center"
+                                          Checked="Sway_Changed" Unchecked="Sway_Changed" />
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Weapon sway" Style="{StaticResource Subtext}" />
+                                    <TextBlock Text="How far the gun drifts while you aim and move."
+                                               Style="{StaticResource Subtext}" Opacity="0.7" />
+                                </StackPanel>
+                            </DockPanel>
+
+                            <Grid Margin="0,10,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Strength" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
+                                <TextBlock x:Name="SwayValueText" Grid.Column="1" Text="100%"
+                                           Style="{StaticResource Value}" MinWidth="76" />
+                            </Grid>
+                            <Slider x:Name="SwaySlider" Minimum="0" Maximum="100"
+                                    TickFrequency="5" IsSnapToTickEnabled="True"
+                                    Style="{StaticResource Slider}" VerticalAlignment="Center"
+                                    ValueChanged="SwaySlider_ValueChanged" />
+                            <DockPanel Margin="0,2,0,0">
+                                <TextBlock DockPanel.Dock="Right" Text="100%" Style="{StaticResource Subtext}" />
+                                <TextBlock Text="0%" Style="{StaticResource Subtext}" />
+                            </DockPanel>
+
+                            <TextBlock x:Name="SwayHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
                         </StackPanel>
                     </Grid>
                 </Border>
