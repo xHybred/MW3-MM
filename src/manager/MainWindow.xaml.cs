@@ -131,7 +131,7 @@ public partial class MainWindow : Window
 
         AimHint.Text = _config.AimFlat
             ? "Every weapon zooms the same, scopes included."
-            : "Iron sights zoom less, scopes keep more of their magnification.";
+            : "1x sights share one zoom level, scopes keep more of their magnification.";
     }
 
     private void RefreshStatus()

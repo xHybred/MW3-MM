@@ -24,9 +24,6 @@ constexpr uintptr_t kWeaponFovOffset = 0x22630;
 // hook instead of crashing mid-frame.
 constexpr unsigned char kPrologue[] = {0x40, 0x53, 0x48, 0x83, 0xEC, 0x50, 0x0F, 0x29};
 
-// Vanilla 1x magnification: cg_fov 65 over an ADS FOV of 40.
-constexpr float kIronMagnification = 1.625f;
-
 using WeaponFovFn = float (*)(int, int);
 WeaponFovFn g_original = nullptr;
 
@@ -63,20 +60,8 @@ float HookedWeaponFov(int clientNum, int flag) {
 
     const float pivot = g_pivot.load(std::memory_order_relaxed);
     const float vanillaMag = pivot / vanilla;
-    if (!(vanillaMag > 1.0f)) return vanilla;
-
-    const float zoom = g_zoom.load(std::memory_order_relaxed);
-    float mag = zoom;
-    if (g_mode.load(std::memory_order_relaxed) == 0) {
-        // Scale whatever zoom the weapon has beyond 1x, keeping the ratio the
-        // player picked for iron sights: a scope stays magnified, an iron sight
-        // lands on the configured zoom.
-        const float k = (zoom - 1.0f) / (kIronMagnification - 1.0f);
-        mag = 1.0f + (vanillaMag - 1.0f) * k;
-    }
-
-    if (mag < 1.0f) mag = 1.0f;
-    if (mag > vanillaMag) mag = vanillaMag;
+    const float mag = MappedMagnification(vanillaMag, g_zoom.load(std::memory_order_relaxed),
+                                          g_mode.load(std::memory_order_relaxed) == 1);
 
     const float patched = pivot / mag;
     LogIfChanged(vanilla, patched);

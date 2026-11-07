@@ -78,10 +78,14 @@ a 1.63x magnification. To make a 1x sight zoom less, the mod hooks `FUN_14002263
 function that returns `W`, attachment modifiers included) with MinHook and returns
 `pivot / newZoom` instead:
 
-- Iron sights land on `[Aim] Zoom`, 1.1 by default.
+- Iron sights land on `[Aim] Zoom`, 1.1 by default. Weapons the game gives little or
+  no zoom to are grouped by how much they do have, so a revolver and a rifle with the
+  same kind of sight no longer zoom differently: below 1.15x native they all land on
+  1.06x, up to 1.45x they land on 1.08x.
 - Scopes keep the extra magnification, scaled the same way:
   `zoom = 1 + (vanillaZoom - 1) * (wantedZoom - 1) / (1.625 - 1)`. A 4x stays near 1.5x.
-- `[Aim] Flat` skips that and gives every weapon the wanted zoom.
+- `[Aim] Flat` skips that and gives every weapon the wanted zoom, including the ones the
+  game leaves at 1x.
 
 Before the first write the current values are recorded, and disabling the mod puts them
 back, so it does not matter what you had configured in game.
