@@ -11,7 +11,6 @@ namespace MW3ModManager;
 
 public partial class MainWindow : Window
 {
-    private const float AdsBase = 40f;
     private const float PivotFov = 65f;
 
     private ModConfig _config = new();
@@ -37,8 +36,10 @@ public partial class MainWindow : Window
 
         _loading = true;
         FovSlider.Value = Math.Clamp(_config.Fov, 60f, 160f);
+        AimSlider.Value = Math.Clamp(_config.AimZoom * 100f, 100f, 200f);
         EnabledSwitch.IsChecked = _config.Enabled;
         AffectedSwitch.IsChecked = _config.Affected;
+        FlatSwitch.IsChecked = _config.AimFlat;
         _loading = false;
 
         if (!File.Exists(ModConfig.SettingsPath))
@@ -113,18 +114,24 @@ public partial class MainWindow : Window
         FovPanel.Opacity = runtime ? 1.0 : 0.45;
 
         float fov = (float)Math.Round(FovSlider.Value);
-        float ads = _config.Affected ? AdsBase * fov / PivotFov : AdsBase;
+        float zoom = _config.AimZoom;
+        float ads = _config.Affected ? fov / zoom : PivotFov / zoom;
 
         FovValueText.Text = fov.ToString("0") + "\u00B0";
         HipText.Text = fov.ToString("0.0") + "\u00B0";
         AdsText.Text = ads.ToString("0.0") + "\u00B0";
+        AimValueText.Text = Math.Round(zoom * 100f).ToString("0") + "%";
 
         AffectedSwitch.Content = _config.Affected
             ? "Scale aiming FOV with your FOV"
-            : "Keep default aiming zoom";
+            : "Keep aiming FOV fixed";
         AdsHint.Text = _config.Affected
-            ? "Aiming widens with your FOV (40\u00B0 x FOV / 65), like newer Call of Duty titles."
-            : "Aiming stays at the vanilla 40\u00B0, so only the hipfire view changes.";
+            ? "Aiming widens with your FOV, like newer Call of Duty titles."
+            : "Aiming keeps the default 65\u00B0 base, so only the hipfire view changes.";
+
+        AimHint.Text = _config.AimFlat
+            ? "Every weapon zooms the same, scopes included."
+            : "Iron sights zoom less, scopes keep more of their magnification.";
     }
 
     private void RefreshStatus()
@@ -158,6 +165,15 @@ public partial class MainWindow : Window
         if (_loading) return;
         _config.Enabled = EnabledSwitch.IsChecked == true;
         _config.Affected = AffectedSwitch.IsChecked == true;
+        _config.AimFlat = FlatSwitch.IsChecked == true;
+        UpdateFovUi();
+        SaveLater();
+    }
+
+    private void AimSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_loading) return;
+        _config.AimZoom = (float)Math.Round(e.NewValue) / 100f;
         UpdateFovUi();
         SaveLater();
     }

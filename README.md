@@ -5,8 +5,9 @@ option that makes aiming down sights widen along with your FOV.
 
 Vanilla MW3 renders ADS at a fixed 40 degrees no matter what `cg_fov` is set to, so a 1x
 sight feels over-zoomed as soon as you raise your hipfire FOV. This applies the same
-two-dvar trick the newer titles use, so ADS scales with your setting. It works whether
-you start the game from Steam, a shortcut, or a launcher.
+two-dvar trick the newer titles use, so ADS scales with your setting, and it rewrites the
+per-weapon aim zoom so a 1x sight zooms 1.1x instead of 1.63x. It works whether you start
+the game from Steam, a shortcut, or a launcher.
 
 ## Install
 
@@ -26,6 +27,11 @@ Manual install, if you prefer:
 Enabled=1
 Affected=1
 Value=90
+
+[Aim]
+Enabled=1
+Flat=0
+Zoom=1.1
 ```
 
 **Remove** in the manager (or deleting that one DLL) puts the game back to vanilla.
@@ -38,8 +44,11 @@ apply without a restart.
 | Key | Meaning |
 | --- | --- |
 | `[FOV] Enabled` | 1 applies the override, 0 restores your own dvars |
-| `[FOV] Affected` | 1 scales ADS with your FOV, 0 keeps the default ADS zoom |
+| `[FOV] Affected` | 1 scales ADS with your FOV, 0 keeps the aiming FOV fixed |
 | `[FOV] Value` | total hipfire FOV, clamped to 40..160 |
+| `[Aim] Enabled` | 1 applies the aiming zoom, 0 leaves the weapon data alone |
+| `[Aim] Zoom` | how much a 1x sight zooms, 1.0 = no zoom, 1.1 = default |
+| `[Aim] Flat` | 0 keeps scopes magnified, 1 gives every weapon the same zoom |
 | `[Debug] LogEffectiveFov` | log the FOV the renderer actually gets, twice a second |
 | `[Debug] DvarScan` | log every step of the dvar lookup |
 
@@ -57,12 +66,22 @@ string, then checks the candidate against the known `dvar_t` layout (type byte a
 value at +0x10, reset at +0x30). Addresses move between processes and levels, so nothing
 is hardcoded.
 
-The engine's effective FOV is `cg_fov * cg_fovScale` for hipfire, and `40 * cg_fovScale`
-for ADS. So:
+The engine's effective FOV is `cg_fov * cg_fovScale` for hipfire, and `W * cg_fovScale`
+for ADS, where `W` is the equipped weapon's `adsZoomFov`. So:
 
 - **Affected** keeps `cg_fov` at 65 and sets `cg_fovScale` to `FOV / 65`. Hipfire is your
-  FOV, ADS becomes `40 * FOV / 65`.
+  FOV and ADS becomes `W * FOV / 65`, which keeps the weapon's zoom ratio exactly.
 - **Independent** sets `cg_fov` to your FOV and `cg_fovScale` to 1. Only hipfire changes.
+
+`W` is what sets the zoom, and vanilla iron sights have `W = 40` against a base of 65,
+a 1.63x magnification. To make a 1x sight zoom less, the mod hooks `FUN_140022630` (the
+function that returns `W`, attachment modifiers included) with MinHook and returns
+`pivot / newZoom` instead:
+
+- Iron sights land on `[Aim] Zoom`, 1.1 by default.
+- Scopes keep the extra magnification, scaled the same way:
+  `zoom = 1 + (vanillaZoom - 1) * (wantedZoom - 1) / (1.625 - 1)`. A 4x stays near 1.5x.
+- `[Aim] Flat` skips that and gives every weapon the wanted zoom.
 
 Before the first write the current values are recorded, and disabling the mod puts them
 back, so it does not matter what you had configured in game.
@@ -80,8 +99,9 @@ Output: `out\MW3Mod.dll` and `out\manager\`. The runtime alone is `.\build.ps1`.
 ## Notes and limits
 
 - Tested against the x64 `iw5sp.exe` from the 2026-09-03 update (menu shows 2.0.15). The
-  dvar lookup does not depend on addresses, but nothing else here has been checked
-  against the 32-bit builds.
+  dvar lookup does not depend on addresses. The aiming-zoom hook does: it checks the
+  first bytes of the function before hooking, and if a future update changes them the mod
+  logs `ADS zoom: unexpected code` and keeps the dvar part working.
 - `iw5sp.exe` on disk is a Steam DRM stub, so launching it directly exits with code 53.
   Start the game through Steam.
 - `cg_*` dvars only exist once a level is running, so the mod idles on the frontend. That
@@ -91,4 +111,6 @@ Output: `out\MW3Mod.dll` and `out\manager\`. The runtime alone is `.\build.ps1`.
 - The manager can also drop in a DXVK `d3d9.dll` for a Vulkan renderer. The proxy sits on
   `X3DAudio1_7.dll`, so the two do not collide. DXVK is not included.
 - `tools\` holds the throwaway scripts used while reversing: `set_fov.py` writes the dvars
-  in a running game from outside, `inspect.py` dumps candidate dvar structs.
+  in a running game from outside, `inspect.py` dumps candidate dvar structs, and
+  `patch_weapon_fov.py` served as the proof that overriding the weapon ADS FOV is enough
+  (a runtime patch of that function, now superseded by the hook).

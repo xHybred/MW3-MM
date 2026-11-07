@@ -10,6 +10,9 @@ public sealed class ModConfig
     public bool Enabled { get; set; } = true;
     public bool Affected { get; set; } = true;
     public float Fov { get; set; } = 90f;
+    public bool AimEnabled { get; set; } = true;
+    public bool AimFlat { get; set; }
+    public float AimZoom { get; set; } = 1.1f;
     public bool LogEffectiveFov { get; set; } = true;
     public bool DvarScan { get; set; }
 
@@ -55,6 +58,18 @@ public sealed class ModConfig
                         break;
                 }
             }
+            else if (section.Equals("Aim", StringComparison.OrdinalIgnoreCase))
+            {
+                switch (key.ToLowerInvariant())
+                {
+                    case "enabled": config.AimEnabled = ParseBool(value, config.AimEnabled); break;
+                    case "flat": config.AimFlat = ParseBool(value, config.AimFlat); break;
+                    case "zoom":
+                        if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float zoom))
+                            config.AimZoom = Math.Clamp(zoom, 1f, 2f);
+                        break;
+                }
+            }
             else if (section.Equals("Debug", StringComparison.OrdinalIgnoreCase))
             {
                 switch (key.ToLowerInvariant())
@@ -77,6 +92,11 @@ public sealed class ModConfig
             $"Enabled={(Enabled ? 1 : 0)}",
             $"Affected={(Affected ? 1 : 0)}",
             "Value=" + Fov.ToString("0.###", CultureInfo.InvariantCulture),
+            "",
+            "[Aim]",
+            $"Enabled={(AimEnabled ? 1 : 0)}",
+            $"Flat={(AimFlat ? 1 : 0)}",
+            "Zoom=" + AimZoom.ToString("0.###", CultureInfo.InvariantCulture),
             "",
             "[Debug]",
             $"LogEffectiveFov={(LogEffectiveFov ? 1 : 0)}",

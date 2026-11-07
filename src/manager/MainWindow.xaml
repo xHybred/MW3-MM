@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="MW3 Mod Manager"
-        Width="820" Height="740" MinWidth="700" MinHeight="600"
+        Width="820" Height="820" MinWidth="700" MinHeight="600"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource Bg}"
         FontFamily="Segoe UI"
@@ -57,6 +57,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
                         <DockPanel>
@@ -97,7 +98,32 @@
                         <TextBlock x:Name="AdsHint" Grid.Row="4" Margin="0,6,0,0"
                                    Style="{StaticResource Subtext}" />
 
-                        <Border Grid.Row="5" Background="#121517" CornerRadius="6" Padding="14,11" Margin="0,16,0,0">
+                        <StackPanel Grid.Row="5" Margin="0,18,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Aiming zoom" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
+                                <TextBlock x:Name="AimValueText" Grid.Column="1" Text="110%"
+                                           Style="{StaticResource Value}" MinWidth="76" />
+                            </Grid>
+                            <Slider x:Name="AimSlider" Minimum="100" Maximum="200"
+                                    TickFrequency="1" IsSnapToTickEnabled="True"
+                                    Style="{StaticResource Slider}" VerticalAlignment="Center"
+                                    Margin="0,8,0,0" ValueChanged="AimSlider_ValueChanged" />
+                            <DockPanel Margin="0,2,0,0">
+                                <TextBlock DockPanel.Dock="Right" Text="200%" Style="{StaticResource Subtext}" />
+                                <TextBlock Text="100%" Style="{StaticResource Subtext}" />
+                            </DockPanel>
+                            <CheckBox x:Name="FlatSwitch" Margin="0,14,0,0"
+                                      Content="Same zoom on every weapon"
+                                      Style="{StaticResource Switch}"
+                                      Checked="Options_Changed" Unchecked="Options_Changed" />
+                            <TextBlock x:Name="AimHint" Margin="0,6,0,0" Style="{StaticResource Subtext}" />
+                        </StackPanel>
+
+                        <Border Grid.Row="6" Background="#121517" CornerRadius="6" Padding="14,11" Margin="0,16,0,0">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />

@@ -27,6 +27,9 @@ bool LoadSettings(ModSettings& out) {
     out.enabled = GetPrivateProfileIntW(L"FOV", L"Enabled", 1, path.c_str()) != 0;
     out.affected = GetPrivateProfileIntW(L"FOV", L"Affected", 1, path.c_str()) != 0;
     out.fov = ReadFloatKey(path, L"FOV", L"Value", 90.0f);
+    out.aimEnabled = GetPrivateProfileIntW(L"Aim", L"Enabled", 1, path.c_str()) != 0;
+    out.aimFlat = GetPrivateProfileIntW(L"Aim", L"Flat", 0, path.c_str()) != 0;
+    out.aimZoom = ReadFloatKey(path, L"Aim", L"Zoom", 1.1f);
     out.logEffectiveFov = GetPrivateProfileIntW(L"Debug", L"LogEffectiveFov", 0, path.c_str()) != 0;
     out.dvarScanVerbose = GetPrivateProfileIntW(L"Debug", L"DvarScan", 0, path.c_str()) != 0;
     return true;

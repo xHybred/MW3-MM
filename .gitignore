@@ -6,3 +6,6 @@ obj/
 .vs/
 __pycache__/
 *.pyc
+
+# patch_weapon_fov.py saves the bytes it replaced
+*.orig

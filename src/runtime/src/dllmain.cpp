@@ -2,15 +2,16 @@
 #include <cmath>
 #include <string>
 
+#include "adszoom.h"
 #include "dvar.h"
 #include "log.h"
 #include "settings.h"
 
 namespace {
 
-// The engine's ADS FOV is a fixed 40 degrees times cg_fovScale, so holding
-// cg_fov at the default 65 and putting the whole change into the scale keeps
-// hipfire at the requested FOV while ADS grows with it.
+// Fallback pivot when the dvars cannot be read yet: cg_fov's default. The real
+// pivot is captured from the live dvar, this only keeps the aiming-zoom math
+// sane on the frontend.
 constexpr float kPivotFov = 65.0f;
 
 // What the dvars held before we touched them, captured per level so disabling
@@ -82,6 +83,7 @@ bool ResolveDvars(DvarRef& fovDvar, DvarRef& scaleDvar) {
 
 DWORD WINAPI ModThread(LPVOID) {
     LogF(L"attached to pid %lu", GetCurrentProcessId());
+    adszoom::Install();
 
     DvarRef fovDvar;
     DvarRef scaleDvar;
@@ -97,6 +99,7 @@ DWORD WINAPI ModThread(LPVOID) {
         ModSettings settings;
         if (!LoadSettings(settings)) settings = ModSettings{};
         g_dvarScanVerbose = settings.dvarScanVerbose;
+        adszoom::Update(settings, baseline.captured ? baseline.fov : kPivotFov);
 
         if (!StillValid(fovDvar, "cg_fov") || !StillValid(scaleDvar, "cg_fovScale")) {
             if (resolved) {
@@ -165,5 +168,5 @@ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID) {
 // Version marker: the manager greps the file for it to tell this proxy apart
 // from the system X3DAudio1_7.dll it forwards to.
 extern "C" __declspec(dllexport) const char* MW3ModVersion() {
-    return "MW3Mod 0.1.0";
+    return "MW3Mod 0.2.0";
 }
