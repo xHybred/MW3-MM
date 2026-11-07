@@ -4,6 +4,7 @@
 
 #include "adszoom.h"
 #include "blur.h"
+#include "sway.h"
 #include "weapon.h"
 #include "dvar.h"
 #include "flinch.h"
@@ -77,6 +78,7 @@ DWORD WINAPI ModThread(LPVOID) {
     LogF(L"attached to pid %lu", GetCurrentProcessId());
     adszoom::Install();
     blur::Install();
+    sway::Install();
 
     DvarRef fovDvar;
     DvarRef scaleDvar;
@@ -95,6 +97,7 @@ DWORD WINAPI ModThread(LPVOID) {
         g_dvarScanVerbose = settings.dvarScanVerbose;
         adszoom::Update(settings, baseline.captured ? baseline.fov : kPivotFov);
         blur::Update(settings);
+        sway::Update(settings);
         weapon::Update(settings);
 
         // The flinch dvars exist from startup, so they resolve before a level
@@ -174,5 +177,5 @@ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID) {
 // Version marker: the manager greps the file for it to tell this proxy apart
 // from the system X3DAudio1_7.dll it forwards to.
 extern "C" __declspec(dllexport) const char* MW3ModVersion() {
-    return "MW3Mod 0.4.3";
+    return "MW3Mod 0.4.4";
 }

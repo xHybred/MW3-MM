@@ -71,7 +71,7 @@ apply without a restart.
 | `[Blur] Strength` | 0..1, how heavy that blur is. 1 = stock, 0 = the same as Enabled=0 |
 | `[Recoil] Enabled` | 1 scales the gun's own kick, 0 leaves the weapon data alone |
 | `[Recoil] Strength` | 0..1, how far the gun kicks when you fire. 1 = stock, 0 = no kick |
-| `[Sway] Enabled` | 1 scales how far the gun drifts while aiming and moving, 0 leaves the weapon data alone |
+| `[Sway] Enabled` | 1 scales how far the gun drifts while aiming and moving, 0 leaves it untouched |
 | `[Sway] Strength` | 0..1, how far the gun drifts. 1 = stock, 0 = no drift |
 | `[Debug] LogEffectiveFov` | log each weapon's aim FOV when it changes |
 | `[Debug] DvarScan` | log every step of the dvar lookup |
@@ -134,9 +134,12 @@ stay untouched, so the gun keeps its firing rhythm and only travels less far. Va
 recorded per weapon the first time it is seen, so switching or picking a weapon up never
 compounds the scaling.
 
-Weapon sway uses the same weapon definition. The runtime scales `swayMaxAngle` (hipfire) and
-`adsSwayMaxAngle` (aiming), which set how far the gun drifts. The other sway fields are left
-alone.
+Weapon sway is the viewmodel's own drift, and it does not come from weapon data the runtime can
+reach: the engine reads the sway fields from a per-client state object, and writing them there
+made no difference on any weapon the player actually holds. So the runtime hooks the sway update
+instead and scales its output (`iw5sp.exe+0x2D900`, the four smoothed offsets it writes back each
+frame). That works on whatever is in your hands, including a weapon picked up mid-match, and it
+never touches the smoothing, so the drift keeps its shape and only gets smaller.
 
 ## Build
 

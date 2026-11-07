@@ -8,6 +8,7 @@ add_library(mw3mod SHARED
     src/dllmain.cpp
     src/adszoom.cpp
     src/blur.cpp
+    src/sway.cpp
     src/weapon.cpp
     src/dvar.cpp
     src/flinch.cpp
