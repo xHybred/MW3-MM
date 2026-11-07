@@ -48,6 +48,9 @@ Strength=1
 [Sway]
 Enabled=1
 Strength=1
+
+[Flash]
+Enabled=1
 ```
 
 **Remove** in the manager (or deleting that one DLL) puts the game back to vanilla.
@@ -73,6 +76,7 @@ apply without a restart.
 | `[Recoil] Strength` | 0..1, how far the gun kicks when you fire. 1 = stock, 0 = no kick |
 | `[Sway] Enabled` | 1 scales how far the gun drifts while aiming and moving, 0 leaves it untouched |
 | `[Sway] Strength` | 0..1, how far the gun drifts. 1 = stock, 0 = no drift |
+| `[Flash] Enabled` | 1 leaves the muzzle flash and its smoke puff, 0 removes both |
 | `[Debug] LogEffectiveFov` | log each weapon's aim FOV when it changes |
 | `[Debug] DvarScan` | log every step of the dvar lookup |
 
@@ -140,6 +144,11 @@ angles. The runtime hooks that function (`iw5sp.exe+0x2DD50`), remembers what th
 it ran, and scales only the difference it added. At 0 the gun is locked to the camera and the world
 keeps moving normally; at 1 it is stock. Because only that function's contribution is scaled, the
 aiming pose, the raise and the weapon animation are untouched.
+
+The muzzle flash is an effect asset per weapon (`viewFlashEffect`, a pointer at +0x70 in the weapon
+definition). Nothing in the game exposes it as a setting, so the runtime clears that pointer when the
+toggle is off and puts it back when it is on. The smoke puff at the barrel comes from the same asset,
+so both go together. A null effect pointer is safe; the engine simply spawns nothing.
 
 ## Build
 

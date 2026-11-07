@@ -47,6 +47,7 @@ bool LoadSettings(ModSettings& out) {
     out.swayDebug = GetPrivateProfileIntW(L"Debug", L"Sway", 0, path.c_str()) != 0;
     out.swayEnabled = GetPrivateProfileIntW(L"Sway", L"Enabled", 1, path.c_str()) != 0;
     out.swayStrength = Clamp01(ReadFloatKey(path, L"Sway", L"Strength", 1.0f));
+    out.flashEnabled = GetPrivateProfileIntW(L"Flash", L"Enabled", 1, path.c_str()) != 0;
     out.logEffectiveFov = GetPrivateProfileIntW(L"Debug", L"LogEffectiveFov", 0, path.c_str()) != 0;
     out.dvarScanVerbose = GetPrivateProfileIntW(L"Debug", L"DvarScan", 0, path.c_str()) != 0;
     return true;

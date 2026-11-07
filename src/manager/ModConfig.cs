@@ -30,6 +30,7 @@ public sealed class ModConfig
 
     public bool SwayEnabled { get; set; } = true;
     public float SwayStrength { get; set; } = 1.0f;
+    public bool FlashEnabled { get; set; } = true;
     public bool LogEffectiveFov { get; set; }
     public bool DvarScan { get; set; }
 
@@ -131,6 +132,11 @@ public sealed class ModConfig
                         break;
                 }
             }
+            else if (section.Equals("Flash", StringComparison.OrdinalIgnoreCase))
+            {
+                if (key.ToLowerInvariant() == "enabled")
+                    config.FlashEnabled = ParseBool(value, config.FlashEnabled);
+            }
             else if (section.Equals("Debug", StringComparison.OrdinalIgnoreCase))
             {
                 switch (key.ToLowerInvariant())
@@ -176,6 +182,9 @@ public sealed class ModConfig
             "[Sway]",
             $"Enabled={(SwayEnabled ? 1 : 0)}",
             "Strength=" + SwayStrength.ToString("0.###", CultureInfo.InvariantCulture),
+            "",
+            "[Flash]",
+            $"Enabled={(FlashEnabled ? 1 : 0)}",
             "",
             "[Debug]",
             $"LogEffectiveFov={(LogEffectiveFov ? 1 : 0)}",

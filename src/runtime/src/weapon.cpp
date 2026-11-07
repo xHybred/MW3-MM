@@ -17,6 +17,9 @@ namespace
     constexpr size_t kWeaponDefArray = 0x4E86E0;
     constexpr size_t kRedirectIndex = 0xC8;
     constexpr size_t kWeaponDefPointer = 0x08;
+    // WeaponDef::viewFlashEffect: the first-person muzzle flash, smoke puff
+    // included. There is no separate smoke slot in the weapon definition.
+    constexpr size_t kFlashEffect = 0x70;
     // The engine asks for entity numbers here, not just the four local clients,
     // so survival bots come through with values well above 3.
     constexpr int kMaxClients = 1024;
@@ -43,6 +46,7 @@ namespace
     {
         void* def;
         float vanilla[kFieldCount];
+        void* vanillaFlash;
         bool usable;
     };
 
@@ -52,8 +56,10 @@ namespace
 
     std::atomic<bool> g_enabled{true};
     std::atomic<float> g_strength{1.0f};
+    std::atomic<bool> g_flashEnabled{true};
     std::atomic<bool> g_log{false};
     std::atomic<bool> g_reportedClient{false};
+    bool g_seenClient[kMaxClients] = {};
 
     uintptr_t ImageBase()
     {
@@ -70,9 +76,25 @@ namespace
         return true;
     }
 
+    // Weapon names are either the asset name ("acr", "mp412") or the
+    // multiplayer style ("iw5_fnfiveseven_mp"), so match the shape rather than
+    // a prefix: something printable and reasonably short.
     bool IsWeaponName(const char* name)
     {
-        return name && name[0] == 'i' && name[1] == 'w' && name[2] == '5' && name[3] == '_';
+        if (!name || !name[0])
+            return false;
+
+        for (int i = 0; i < 64; ++i)
+        {
+            const char c = name[i];
+            if (!c)
+                return i > 0;
+            const bool ok = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                            (c >= '0' && c <= '9') || c == '_' || c == '-' || c == '.';
+            if (!ok)
+                return false;
+        }
+        return false;
     }
 
     // Keeps one set of original values per weapon. Without this, writing a
@@ -101,6 +123,7 @@ namespace
         auto* base = static_cast<unsigned char*>(def);
         for (size_t i = 0; i < kFieldCount; ++i)
             slot->vanilla[i] = *reinterpret_cast<float*>(base + kFields[i]);
+        slot->vanillaFlash = *reinterpret_cast<void**>(base + kFlashEffect);
 
         slot->usable = Plausible(slot->vanilla);
         if (!slot->usable)
@@ -115,6 +138,19 @@ namespace
                  slot->vanilla[0], slot->vanilla[1], slot->vanilla[2], slot->vanilla[3]);
             LogF(L"weapon:   hip pitch %.3f..%.3f yaw %.3f..%.3f", slot->vanilla[4],
                  slot->vanilla[5], slot->vanilla[6], slot->vanilla[7]);
+
+            auto* fx = static_cast<unsigned char*>(slot->vanillaFlash);
+            if (fx)
+            {
+                const char* fxName = *reinterpret_cast<char**>(fx);
+                LogF(L"weapon:   flash %p %S elems %d/%d/%d", slot->vanillaFlash,
+                     fxName ? fxName : "?", *reinterpret_cast<int*>(fx + 0x14),
+                     *reinterpret_cast<int*>(fx + 0x18), *reinterpret_cast<int*>(fx + 0x1C));
+            }
+            else
+            {
+                LogF(L"weapon:   flash none");
+            }
         }
         return slot;
     }
@@ -133,6 +169,15 @@ void weapon::ApplyFromClient(int clientNum)
 
     auto** defs = reinterpret_cast<void**>(ImageBase() + kWeaponDefArray);
     void* def = defs[clientNum];
+
+    // Which clients the engine actually asks about, and what each slot holds.
+    // This is the only way to see why a weapon's fields are never touched.
+    if (logging && !g_seenClient[clientNum])
+    {
+        g_seenClient[clientNum] = true;
+        LogF(L"weapon: client %d def %p", clientNum, def);
+    }
+
     if (!def)
         return;
 
@@ -177,11 +222,23 @@ void weapon::ApplyFromClient(int clientNum)
             *value = wanted;
         }
     }
+
+    // Nulling the effect is the only lever for the muzzle flash: there is no
+    // dvar for it and no separate smoke slot to switch independently.
+    void* wantedFlash = g_flashEnabled.load(std::memory_order_relaxed) ? slot->vanillaFlash : nullptr;
+    auto* flashSlot = reinterpret_cast<void**>(base + kFlashEffect);
+    if (*flashSlot != wantedFlash)
+    {
+        if (logging)
+            LogF(L"weapon: %S flash %p -> %p", name, *flashSlot, wantedFlash);
+        *flashSlot = wantedFlash;
+    }
 }
 
 void weapon::Update(const ModSettings& settings)
 {
     g_enabled.store(settings.recoilEnabled, std::memory_order_relaxed);
     g_strength.store(settings.recoilStrength, std::memory_order_relaxed);
+    g_flashEnabled.store(settings.flashEnabled, std::memory_order_relaxed);
     g_log.store(settings.recoilDebug, std::memory_order_relaxed);
 }

@@ -50,6 +50,7 @@ public partial class MainWindow : Window
         RecoilSwitch.IsChecked = _config.RecoilEnabled;
         SwaySlider.Value = Math.Clamp(_config.SwayStrength * 100f, 0f, 100f);
         SwaySwitch.IsChecked = _config.SwayEnabled;
+        FlashSwitch.IsChecked = _config.FlashEnabled;
         _loading = false;
 
         if (!File.Exists(ModConfig.SettingsPath))
@@ -172,6 +173,10 @@ public partial class MainWindow : Window
             : _config.SwayStrength <= 0.001f
                 ? "The gun does not drift."
                 : "The gun drifts less.";
+
+        FlashHint.Text = _config.FlashEnabled
+            ? "Stock. The flash and the smoke puff stay."
+            : "No flash and no smoke puff when you fire.";
     }
 
     private void RefreshStatus()
@@ -271,6 +276,14 @@ public partial class MainWindow : Window
     {
         if (_loading) return;
         _config.SwayEnabled = SwaySwitch.IsChecked == true;
+        SaveLater();
+    }
+
+    private void Flash_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        _config.FlashEnabled = FlashSwitch.IsChecked == true;
+        UpdateFovUi();
         SaveLater();
     }
 

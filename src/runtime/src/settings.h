@@ -20,6 +20,7 @@ struct ModSettings {
     bool swayDebug = false;
     bool swayEnabled = true;
     float swayStrength = 1.0f;
+    bool flashEnabled = true;
     bool logEffectiveFov = false;
     bool dvarScanVerbose = false;
 };
