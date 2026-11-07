@@ -22,24 +22,12 @@ struct Baseline {
     float scale = 1.0f;
 };
 
-// GetEffectiveFov(playerIndex) from the 2026-09-03 x64 build, used only to log
-// what the renderer actually gets. The dvar writes below do not depend on it,
-// so a wrong offset only costs a bad debug read, never the feature.
-constexpr uintptr_t kEffectiveFovOffset = 0x69e60;
-using EffectiveFovFn = float (*)(int);
-
 bool IsSinglePlayer() {
     wchar_t path[MAX_PATH]{};
     if (GetModuleFileNameW(nullptr, path, MAX_PATH) == 0) return false;
     const wchar_t* name = wcsrchr(path, L'\\');
     name = name ? name + 1 : path;
     return _wcsicmp(name, L"iw5sp.exe") == 0;
-}
-
-EffectiveFovFn EffectiveFov() {
-    HMODULE module = GetModuleHandleW(nullptr);
-    if (!module) return nullptr;
-    return reinterpret_cast<EffectiveFovFn>(reinterpret_cast<uintptr_t>(module) + kEffectiveFovOffset);
 }
 
 void ApplySettings(const DvarRef& fovDvar, const DvarRef& scaleDvar, const ModSettings& settings,
@@ -91,7 +79,6 @@ DWORD WINAPI ModThread(LPVOID) {
     bool applied = false;
     bool resolved = false;
     ULONGLONG nextResolve = 0;
-    ULONGLONG nextFovLog = 0;
 
     // cg_* dvars only exist once a level is running, so keep looking for the
     // whole session instead of giving up on the frontend.
@@ -138,16 +125,6 @@ DWORD WINAPI ModThread(LPVOID) {
             applied = false;
         }
 
-        if (settings.logEffectiveFov) {
-            const ULONGLONG now = GetTickCount64();
-            if (now >= nextFovLog) {
-                nextFovLog = now + 500;
-                if (EffectiveFovFn effectiveFov = EffectiveFov()) {
-                    LogF(L"effective fov %.2f", effectiveFov(0));
-                }
-            }
-        }
-
         Sleep(250);
     }
 }
@@ -168,5 +145,5 @@ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID) {
 // Version marker: the manager greps the file for it to tell this proxy apart
 // from the system X3DAudio1_7.dll it forwards to.
 extern "C" __declspec(dllexport) const char* MW3ModVersion() {
-    return "MW3Mod 0.2.0";
+    return "MW3Mod 0.2.1";
 }

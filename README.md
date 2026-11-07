@@ -49,7 +49,7 @@ apply without a restart.
 | `[Aim] Enabled` | 1 applies the aiming zoom, 0 leaves the weapon data alone |
 | `[Aim] Zoom` | how much a 1x sight zooms, 1.0 = no zoom, 1.1 = default |
 | `[Aim] Flat` | 0 keeps scopes magnified, 1 gives every weapon the same zoom |
-| `[Debug] LogEffectiveFov` | log the FOV the renderer actually gets, twice a second |
+| `[Debug] LogEffectiveFov` | log each weapon's aim FOV when it changes |
 | `[Debug] DvarScan` | log every step of the dvar lookup |
 
 Log: `%LOCALAPPDATA%\MW3Mod\runtime.log` (UTF-16).

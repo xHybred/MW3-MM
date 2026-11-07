@@ -13,7 +13,7 @@ public sealed class ModConfig
     public bool AimEnabled { get; set; } = true;
     public bool AimFlat { get; set; }
     public float AimZoom { get; set; } = 1.1f;
-    public bool LogEffectiveFov { get; set; } = true;
+    public bool LogEffectiveFov { get; set; }
     public bool DvarScan { get; set; }
 
     public static string DataDir =>

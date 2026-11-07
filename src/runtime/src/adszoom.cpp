@@ -35,6 +35,26 @@ std::atomic<int> g_mode{0};  // 0 scales the excess, 1 flattens every weapon
 std::atomic<float> g_zoom{1.1f};
 std::atomic<float> g_pivot{65.0f};
 
+// Debug readout. This runs inside the game's own FOV path, which is the only
+// place the effective value can be read safely: GetEffectiveFov walks live
+// client entities and faults if called from another thread during a level
+// teardown.
+std::atomic<bool> g_log{false};
+std::atomic<ULONGLONG> g_nextLog{0};
+std::atomic<float> g_lastLogged{-1.0f};
+
+void LogIfChanged(float vanilla, float patched) {
+    if (!g_log.load(std::memory_order_relaxed)) return;
+    const ULONGLONG now = GetTickCount64();
+    if (now < g_nextLog.load(std::memory_order_relaxed)) return;
+    if (fabsf(g_lastLogged.load(std::memory_order_relaxed) - patched) < 0.01f) return;
+    g_lastLogged.store(patched, std::memory_order_relaxed);
+    g_nextLog.store(now + 200, std::memory_order_relaxed);
+    const float pivot = g_pivot.load(std::memory_order_relaxed);
+    LogF(L"ADS zoom: weapon %.2f -> %.2f (%.3fx)", vanilla, patched,
+         patched > 0.0f ? pivot / patched : 0.0f);
+}
+
 float HookedWeaponFov(int clientNum, int flag) {
     const float vanilla = g_original(clientNum, flag);
 
@@ -57,7 +77,10 @@ float HookedWeaponFov(int clientNum, int flag) {
 
     if (mag < 1.0f) mag = 1.0f;
     if (mag > vanillaMag) mag = vanillaMag;
-    return pivot / mag;
+
+    const float patched = pivot / mag;
+    LogIfChanged(vanilla, patched);
+    return patched;
 }
 
 }  // namespace
@@ -97,6 +120,7 @@ void Update(const ModSettings& settings, float pivotFov) {
     g_mode.store(settings.aimFlat ? 1 : 0, std::memory_order_relaxed);
     g_zoom.store(settings.aimZoom, std::memory_order_relaxed);
     g_pivot.store(pivotFov > 1.0f ? pivotFov : 65.0f, std::memory_order_relaxed);
+    g_log.store(settings.logEffectiveFov, std::memory_order_relaxed);
 }
 
 }  // namespace adszoom
