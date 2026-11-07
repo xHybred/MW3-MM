@@ -44,8 +44,8 @@ public partial class MainWindow : Window
         AffectedSwitch.IsChecked = _config.Affected;
         FlatSwitch.IsChecked = _config.AimFlat;
         FlinchSlider.Value = Math.Clamp(_config.FlinchStrength * 100f, 0f, 100f);
-        FlinchAnimSlider.Value = Math.Clamp(_config.FlinchAnimation * 100f, 0f, 100f);
         FlinchSwitch.IsChecked = _config.FlinchEnabled;
+        BlurSwitch.IsChecked = _config.BlurEnabled;
         _loading = false;
 
         if (!File.Exists(ModConfig.SettingsPath))
@@ -147,7 +147,6 @@ public partial class MainWindow : Window
         FlinchPanel.IsEnabled = runtime;
         FlinchPanel.Opacity = runtime ? 1.0 : 0.45;
         FlinchValueText.Text = Math.Round(FlinchSlider.Value).ToString("0") + "%";
-        FlinchAnimValueText.Text = Math.Round(FlinchAnimSlider.Value).ToString("0") + "%";
         FlinchHint.Text = _config.FlinchStrength >= 0.999f
             ? "Stock. Damage kicks the view exactly as it always did."
             : _config.FlinchStrength <= 0.001f
@@ -211,18 +210,17 @@ public partial class MainWindow : Window
         SaveLater();
     }
 
-    private void FlinchAnimSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (_loading) return;
-        _config.FlinchAnimation = (float)Math.Round(e.NewValue) / 100f;
-        UpdateFovUi();
-        SaveLater();
-    }
-
     private void Flinch_Changed(object sender, RoutedEventArgs e)
     {
         if (_loading) return;
         _config.FlinchEnabled = FlinchSwitch.IsChecked == true;
+        SaveLater();
+    }
+
+    private void Blur_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        _config.BlurEnabled = BlurSwitch.IsChecked == true;
         SaveLater();
     }
 

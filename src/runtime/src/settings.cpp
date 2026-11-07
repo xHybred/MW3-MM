@@ -38,7 +38,9 @@ bool LoadSettings(ModSettings& out) {
     out.aimZoom = ReadFloatKey(path, L"Aim", L"Zoom", 1.1f);
     out.flinchEnabled = GetPrivateProfileIntW(L"Flinch", L"Enabled", 1, path.c_str()) != 0;
     out.flinchStrength = Clamp01(ReadFloatKey(path, L"Flinch", L"Strength", 1.0f));
-    out.flinchAnimation = Clamp01(ReadFloatKey(path, L"Flinch", L"Animation", 1.0f));
+    out.blurEnabled = GetPrivateProfileIntW(L"Blur", L"Enabled", 1, path.c_str()) != 0;
+    out.blurStrength = Clamp01(ReadFloatKey(path, L"Blur", L"Strength", 1.0f));
+    out.blurDebug = GetPrivateProfileIntW(L"Debug", L"BlurCalls", 0, path.c_str()) != 0;
     out.logEffectiveFov = GetPrivateProfileIntW(L"Debug", L"LogEffectiveFov", 0, path.c_str()) != 0;
     out.dvarScanVerbose = GetPrivateProfileIntW(L"Debug", L"DvarScan", 0, path.c_str()) != 0;
     return true;

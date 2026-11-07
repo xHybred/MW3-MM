@@ -147,17 +147,22 @@
                     <Grid x:Name="FlinchPanel">
                         <StackPanel>
                             <DockPanel>
-                                <CheckBox x:Name="FlinchSwitch" DockPanel.Dock="Right" Content="Applied"
-                                          Style="{StaticResource Switch}" VerticalAlignment="Center"
-                                          Checked="Flinch_Changed" Unchecked="Flinch_Changed" />
                                 <StackPanel>
-                                    <TextBlock Text="Flinch" Style="{StaticResource Section}" />
-                                    <TextBlock Text="How far the view jumps when you take damage."
+                                    <TextBlock Text="Damage feedback" Style="{StaticResource Section}" />
+                                    <TextBlock Text="What the screen does when you take a hit."
                                                Style="{StaticResource Subtext}" Margin="0,2,0,0" />
                                 </StackPanel>
                             </DockPanel>
 
-                            <Grid Margin="0,18,0,0">
+                            <DockPanel Margin="0,18,0,0">
+                                <CheckBox x:Name="FlinchSwitch" DockPanel.Dock="Right" Content="Applied"
+                                          Style="{StaticResource Switch}" VerticalAlignment="Center"
+                                          Checked="Flinch_Changed" Unchecked="Flinch_Changed" />
+                                <TextBlock Text="View kick" Style="{StaticResource Subtext}"
+                                           VerticalAlignment="Center" />
+                            </DockPanel>
+
+                            <Grid Margin="0,10,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
@@ -175,25 +180,20 @@
                                 <TextBlock Text="0%" Style="{StaticResource Subtext}" />
                             </DockPanel>
 
-                            <Grid Margin="0,16,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Animation" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
-                                <TextBlock x:Name="FlinchAnimValueText" Grid.Column="1" Text="100%"
-                                           Style="{StaticResource Value}" MinWidth="76" />
-                            </Grid>
-                            <Slider x:Name="FlinchAnimSlider" Minimum="0" Maximum="100"
-                                    TickFrequency="5" IsSnapToTickEnabled="True"
-                                    Style="{StaticResource Slider}" VerticalAlignment="Center"
-                                    ValueChanged="FlinchAnimSlider_ValueChanged" />
-                            <DockPanel Margin="0,2,0,0">
-                                <TextBlock DockPanel.Dock="Right" Text="100%" Style="{StaticResource Subtext}" />
-                                <TextBlock Text="0%" Style="{StaticResource Subtext}" />
-                            </DockPanel>
-
                             <TextBlock x:Name="FlinchHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
+
+                            <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,16,0,14" />
+
+                            <DockPanel>
+                                <CheckBox x:Name="BlurSwitch" DockPanel.Dock="Right" Content="Applied"
+                                          Style="{StaticResource Switch}" VerticalAlignment="Center"
+                                          Checked="Blur_Changed" Unchecked="Blur_Changed" />
+                                <StackPanel>
+                                    <TextBlock Text="Screen blur" Style="{StaticResource Subtext}" />
+                                    <TextBlock Text="The wash that covers the screen when a shot lands."
+                                               Style="{StaticResource Subtext}" Opacity="0.7" Margin="0,2,0,0" />
+                                </StackPanel>
+                            </DockPanel>
                         </StackPanel>
                     </Grid>
                 </Border>

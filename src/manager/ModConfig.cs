@@ -21,7 +21,9 @@ public sealed class ModConfig
     public float AimZoom { get; set; } = 1.1f;
     public bool FlinchEnabled { get; set; } = true;
     public float FlinchStrength { get; set; } = 1.0f;
-    public float FlinchAnimation { get; set; } = 1.0f;
+    public bool BlurEnabled { get; set; } = true;
+    public float BlurStrength { get; set; } = 1.0f;
+    public bool BlurDebug { get; set; }
     public bool LogEffectiveFov { get; set; }
     public bool DvarScan { get; set; }
 
@@ -88,9 +90,16 @@ public sealed class ModConfig
                         if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float strength))
                             config.FlinchStrength = Math.Clamp(strength, 0f, 1f);
                         break;
-                    case "animation":
-                        if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float animation))
-                            config.FlinchAnimation = Math.Clamp(animation, 0f, 1f);
+                }
+            }
+            else if (section.Equals("Blur", StringComparison.OrdinalIgnoreCase))
+            {
+                switch (key.ToLowerInvariant())
+                {
+                    case "enabled": config.BlurEnabled = ParseBool(value, config.BlurEnabled); break;
+                    case "strength":
+                        if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float blurStrength))
+                            config.BlurStrength = Math.Clamp(blurStrength, 0f, 1f);
                         break;
                 }
             }
@@ -100,6 +109,7 @@ public sealed class ModConfig
                 {
                     case "logeffectivefov": config.LogEffectiveFov = ParseBool(value, config.LogEffectiveFov); break;
                     case "dvarscan": config.DvarScan = ParseBool(value, config.DvarScan); break;
+                    case "blurcalls": config.BlurDebug = ParseBool(value, config.BlurDebug); break;
                 }
             }
         }
@@ -125,7 +135,10 @@ public sealed class ModConfig
             "[Flinch]",
             $"Enabled={(FlinchEnabled ? 1 : 0)}",
             "Strength=" + FlinchStrength.ToString("0.###", CultureInfo.InvariantCulture),
-            "Animation=" + FlinchAnimation.ToString("0.###", CultureInfo.InvariantCulture),
+            "",
+            "[Blur]",
+            $"Enabled={(BlurEnabled ? 1 : 0)}",
+            "Strength=" + BlurStrength.ToString("0.###", CultureInfo.InvariantCulture),
             "",
             "[Debug]",
             $"LogEffectiveFov={(LogEffectiveFov ? 1 : 0)}",

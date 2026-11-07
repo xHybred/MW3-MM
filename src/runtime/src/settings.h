@@ -11,7 +11,9 @@ struct ModSettings {
     float aimZoom = 1.1f;
     bool flinchEnabled = true;
     float flinchStrength = 1.0f;
-    float flinchAnimation = 1.0f;
+    bool blurEnabled = true;
+    float blurStrength = 1.0f;
+    bool blurDebug = false;
     bool logEffectiveFov = false;
     bool dvarScanVerbose = false;
 };

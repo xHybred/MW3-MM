@@ -32,6 +32,14 @@ Value=90
 Enabled=1
 Flat=0
 Zoom=1.1
+
+[Flinch]
+Enabled=1
+Strength=1
+
+[Blur]
+Enabled=1
+Strength=1
 ```
 
 **Remove** in the manager (or deleting that one DLL) puts the game back to vanilla.
@@ -51,7 +59,8 @@ apply without a restart.
 | `[Aim] Flat` | 0 keeps scopes magnified, 1 gives every weapon the same zoom |
 | `[Flinch] Enabled` | 1 applies the flinch scaling, 0 restores your own dvars |
 | `[Flinch] Strength` | 0..1, how hard damage kicks the view. 1 = stock, 0 = no kick |
-| `[Flinch] Animation` | 0..1, length of the flinch animation. 1 = stock |
+| `[Blur] Enabled` | 1 leaves the blur that lands with a hit, 0 removes it |
+| `[Blur] Strength` | 0..1, how heavy that blur is. 1 = stock, 0 = the same as Enabled=0 |
 | `[Debug] LogEffectiveFov` | log each weapon's aim FOV when it changes |
 | `[Debug] DvarScan` | log every step of the dvar lookup |
 
@@ -95,10 +104,16 @@ back, so it does not matter what you had configured in game.
 
 Damage flinch needs no hook. The engine scales a hit by `bg_viewKickScale`, clamps the
 result between `bg_viewKickMin` and `bg_viewKickMax` degrees, and picks the direction with
-`bg_viewKickRandom`; `player_dmgtimer_flinchTime` is how long the flinch animation runs.
-The mod captures all five and writes them scaled by `[Flinch] Strength` and
-`[Flinch] Animation`. The minimum matters more than it looks: it is 5 degrees by default,
+`bg_viewKickRandom`. The mod captures all four and writes them scaled by `[Flinch] Strength`.
+The minimum matters more than it looks: it is 5 degrees by default,
 so lowering only the scale would leave a hard floor that still throws the view around.
+
+The blur that covers the screen when a shot lands is not a dvar; nothing in the 1,560
+registered settings touches it. The scripts call `setBlur`, which lands in the engine at
+`iw5sp.exe+0x327A0` with a radius and a fade time, and that is what the runtime hooks. With
+`[Blur] Enabled=0` every call goes through with a radius of zero, so the fade still runs and
+the picture stays sharp. Because it is the same entry point the scripts use for any blur,
+scripted moments lose their blur too.
 
 ## Build
 

@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_library(mw3mod SHARED
     src/dllmain.cpp
     src/adszoom.cpp
+    src/blur.cpp
     src/dvar.cpp
     src/flinch.cpp
     src/log.cpp
