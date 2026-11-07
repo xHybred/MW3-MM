@@ -9,6 +9,9 @@ struct ModSettings {
     bool aimEnabled = true;
     bool aimFlat = false;
     float aimZoom = 1.1f;
+    bool flinchEnabled = true;
+    float flinchStrength = 1.0f;
+    float flinchAnimation = 1.0f;
     bool logEffectiveFov = false;
     bool dvarScanVerbose = false;
 };

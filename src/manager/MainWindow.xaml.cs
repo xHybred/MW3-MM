@@ -43,6 +43,9 @@ public partial class MainWindow : Window
         EnabledSwitch.IsChecked = _config.Enabled;
         AffectedSwitch.IsChecked = _config.Affected;
         FlatSwitch.IsChecked = _config.AimFlat;
+        FlinchSlider.Value = Math.Clamp(_config.FlinchStrength * 100f, 0f, 100f);
+        FlinchAnimSlider.Value = Math.Clamp(_config.FlinchAnimation * 100f, 0f, 100f);
+        FlinchSwitch.IsChecked = _config.FlinchEnabled;
         _loading = false;
 
         if (!File.Exists(ModConfig.SettingsPath))
@@ -140,6 +143,16 @@ public partial class MainWindow : Window
         AimHint.Text = _config.AimFlat
             ? "Every weapon zooms the same, scopes included."
             : "1x sights share one zoom level, scopes keep more of their magnification.";
+
+        FlinchPanel.IsEnabled = runtime;
+        FlinchPanel.Opacity = runtime ? 1.0 : 0.45;
+        FlinchValueText.Text = Math.Round(FlinchSlider.Value).ToString("0") + "%";
+        FlinchAnimValueText.Text = Math.Round(FlinchAnimSlider.Value).ToString("0") + "%";
+        FlinchHint.Text = _config.FlinchStrength >= 0.999f
+            ? "Stock. Damage kicks the view exactly as it always did."
+            : _config.FlinchStrength <= 0.001f
+                ? "No view kick at all when you take damage."
+                : "Damage kicks the view less, and the minimum kick shrinks with it.";
     }
 
     private void RefreshStatus()
@@ -187,6 +200,29 @@ public partial class MainWindow : Window
         if (_loading) return;
         _config.AimZoom = (float)Math.Round(e.NewValue) / 100f;
         UpdateFovUi();
+        SaveLater();
+    }
+
+    private void FlinchSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_loading) return;
+        _config.FlinchStrength = (float)Math.Round(e.NewValue) / 100f;
+        UpdateFovUi();
+        SaveLater();
+    }
+
+    private void FlinchAnimSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_loading) return;
+        _config.FlinchAnimation = (float)Math.Round(e.NewValue) / 100f;
+        UpdateFovUi();
+        SaveLater();
+    }
+
+    private void Flinch_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        _config.FlinchEnabled = FlinchSwitch.IsChecked == true;
         SaveLater();
     }
 

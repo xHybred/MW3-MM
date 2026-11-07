@@ -4,6 +4,7 @@
 
 #include "adszoom.h"
 #include "dvar.h"
+#include "flinch.h"
 #include "log.h"
 #include "settings.h"
 
@@ -79,7 +80,9 @@ DWORD WINAPI ModThread(LPVOID) {
     Baseline baseline;
     bool applied = false;
     bool resolved = false;
+    bool flinchApplied = false;
     ULONGLONG nextResolve = 0;
+    ULONGLONG nextFlinchResolve = 0;
 
     // cg_* dvars only exist once a level is running, so keep looking for the
     // whole session instead of giving up on the frontend.
@@ -88,6 +91,26 @@ DWORD WINAPI ModThread(LPVOID) {
         if (!LoadSettings(settings)) settings = ModSettings{};
         g_dvarScanVerbose = settings.dvarScanVerbose;
         adszoom::Update(settings, baseline.captured ? baseline.fov : kPivotFov);
+
+        // The flinch dvars exist from startup, so they resolve before a level
+        // is anywhere near loaded and survive the level changes below.
+        if (!flinch::Valid()) {
+            const ULONGLONG now = GetTickCount64();
+            if (now >= nextFlinchResolve) {
+                nextFlinchResolve = now + 2000;
+                flinch::Resolve();
+            }
+        }
+        if (flinch::Valid()) {
+            if (settings.flinchEnabled) {
+                flinch::Apply(settings);
+                flinchApplied = true;
+            } else if (flinchApplied) {
+                flinch::Restore();
+                LogF(L"flinch restored");
+                flinchApplied = false;
+            }
+        }
 
         if (!StillValid(fovDvar, "cg_fov") || !StillValid(scaleDvar, "cg_fovScale")) {
             if (resolved) {
@@ -146,5 +169,5 @@ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID) {
 // Version marker: the manager greps the file for it to tell this proxy apart
 // from the system X3DAudio1_7.dll it forwards to.
 extern "C" __declspec(dllexport) const char* MW3ModVersion() {
-    return "MW3Mod 0.3.0";
+    return "MW3Mod 0.4.0";
 }

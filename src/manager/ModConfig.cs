@@ -19,6 +19,9 @@ public sealed class ModConfig
     public bool AimEnabled { get; set; } = true;
     public bool AimFlat { get; set; }
     public float AimZoom { get; set; } = 1.1f;
+    public bool FlinchEnabled { get; set; } = true;
+    public float FlinchStrength { get; set; } = 1.0f;
+    public float FlinchAnimation { get; set; } = 1.0f;
     public bool LogEffectiveFov { get; set; }
     public bool DvarScan { get; set; }
 
@@ -76,6 +79,21 @@ public sealed class ModConfig
                         break;
                 }
             }
+            else if (section.Equals("Flinch", StringComparison.OrdinalIgnoreCase))
+            {
+                switch (key.ToLowerInvariant())
+                {
+                    case "enabled": config.FlinchEnabled = ParseBool(value, config.FlinchEnabled); break;
+                    case "strength":
+                        if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float strength))
+                            config.FlinchStrength = Math.Clamp(strength, 0f, 1f);
+                        break;
+                    case "animation":
+                        if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float animation))
+                            config.FlinchAnimation = Math.Clamp(animation, 0f, 1f);
+                        break;
+                }
+            }
             else if (section.Equals("Debug", StringComparison.OrdinalIgnoreCase))
             {
                 switch (key.ToLowerInvariant())
@@ -103,6 +121,11 @@ public sealed class ModConfig
             $"Enabled={(AimEnabled ? 1 : 0)}",
             $"Flat={(AimFlat ? 1 : 0)}",
             "Zoom=" + AimZoom.ToString("0.###", CultureInfo.InvariantCulture),
+            "",
+            "[Flinch]",
+            $"Enabled={(FlinchEnabled ? 1 : 0)}",
+            "Strength=" + FlinchStrength.ToString("0.###", CultureInfo.InvariantCulture),
+            "Animation=" + FlinchAnimation.ToString("0.###", CultureInfo.InvariantCulture),
             "",
             "[Debug]",
             $"LogEffectiveFov={(LogEffectiveFov ? 1 : 0)}",

@@ -49,6 +49,9 @@ apply without a restart.
 | `[Aim] Enabled` | 1 applies the aiming zoom, 0 leaves the weapon data alone |
 | `[Aim] Zoom` | how much a 1x sight zooms, 1.0 = no zoom, 1.1 = default, 1.35 max |
 | `[Aim] Flat` | 0 keeps scopes magnified, 1 gives every weapon the same zoom |
+| `[Flinch] Enabled` | 1 applies the flinch scaling, 0 restores your own dvars |
+| `[Flinch] Strength` | 0..1, how hard damage kicks the view. 1 = stock, 0 = no kick |
+| `[Flinch] Animation` | 0..1, length of the flinch animation. 1 = stock |
 | `[Debug] LogEffectiveFov` | log each weapon's aim FOV when it changes |
 | `[Debug] DvarScan` | log every step of the dvar lookup |
 
@@ -89,6 +92,13 @@ function that returns `W`, attachment modifiers included) with MinHook and retur
 
 Before the first write the current values are recorded, and disabling the mod puts them
 back, so it does not matter what you had configured in game.
+
+Damage flinch needs no hook. The engine scales a hit by `bg_viewKickScale`, clamps the
+result between `bg_viewKickMin` and `bg_viewKickMax` degrees, and picks the direction with
+`bg_viewKickRandom`; `player_dmgtimer_flinchTime` is how long the flinch animation runs.
+The mod captures all five and writes them scaled by `[Flinch] Strength` and
+`[Flinch] Animation`. The minimum matters more than it looks: it is 5 degrees by default,
+so lowering only the scale would leave a hard floor that still throws the view around.
 
 ## Build
 

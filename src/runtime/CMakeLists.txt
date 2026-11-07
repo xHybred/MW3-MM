@@ -8,6 +8,7 @@ add_library(mw3mod SHARED
     src/dllmain.cpp
     src/adszoom.cpp
     src/dvar.cpp
+    src/flinch.cpp
     src/log.cpp
     src/settings.cpp
     src/proxy.cpp

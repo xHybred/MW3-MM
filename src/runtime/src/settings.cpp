@@ -20,6 +20,12 @@ static float ReadFloatKey(const std::wstring& path, const wchar_t* section, cons
     return static_cast<float>(value);
 }
 
+static float Clamp01(float value) {
+    if (value < 0.0f) return 0.0f;
+    if (value > 1.0f) return 1.0f;
+    return value;
+}
+
 bool LoadSettings(ModSettings& out) {
     const std::wstring path = SettingsPath();
     if (GetFileAttributesW(path.c_str()) == INVALID_FILE_ATTRIBUTES) return false;
@@ -30,6 +36,9 @@ bool LoadSettings(ModSettings& out) {
     out.aimEnabled = GetPrivateProfileIntW(L"Aim", L"Enabled", 1, path.c_str()) != 0;
     out.aimFlat = GetPrivateProfileIntW(L"Aim", L"Flat", 0, path.c_str()) != 0;
     out.aimZoom = ReadFloatKey(path, L"Aim", L"Zoom", 1.1f);
+    out.flinchEnabled = GetPrivateProfileIntW(L"Flinch", L"Enabled", 1, path.c_str()) != 0;
+    out.flinchStrength = Clamp01(ReadFloatKey(path, L"Flinch", L"Strength", 1.0f));
+    out.flinchAnimation = Clamp01(ReadFloatKey(path, L"Flinch", L"Animation", 1.0f));
     out.logEffectiveFov = GetPrivateProfileIntW(L"Debug", L"LogEffectiveFov", 0, path.c_str()) != 0;
     out.dvarScanVerbose = GetPrivateProfileIntW(L"Debug", L"DvarScan", 0, path.c_str()) != 0;
     return true;

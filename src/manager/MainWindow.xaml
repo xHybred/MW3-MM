@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="MW3 Mod Manager"
-        Width="820" Height="820" MinWidth="700" MinHeight="600"
+        Width="820" Height="980" MinWidth="700" MinHeight="600"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource Bg}"
         FontFamily="Segoe UI"
@@ -140,6 +140,61 @@
                                            FontWeight="SemiBold" VerticalAlignment="Center" />
                             </Grid>
                         </Border>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <Grid x:Name="FlinchPanel">
+                        <StackPanel>
+                            <DockPanel>
+                                <CheckBox x:Name="FlinchSwitch" DockPanel.Dock="Right" Content="Applied"
+                                          Style="{StaticResource Switch}" VerticalAlignment="Center"
+                                          Checked="Flinch_Changed" Unchecked="Flinch_Changed" />
+                                <StackPanel>
+                                    <TextBlock Text="Flinch" Style="{StaticResource Section}" />
+                                    <TextBlock Text="How far the view jumps when you take damage."
+                                               Style="{StaticResource Subtext}" Margin="0,2,0,0" />
+                                </StackPanel>
+                            </DockPanel>
+
+                            <Grid Margin="0,18,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Strength" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
+                                <TextBlock x:Name="FlinchValueText" Grid.Column="1" Text="100%"
+                                           Style="{StaticResource Value}" MinWidth="76" />
+                            </Grid>
+                            <Slider x:Name="FlinchSlider" Minimum="0" Maximum="100"
+                                    TickFrequency="5" IsSnapToTickEnabled="True"
+                                    Style="{StaticResource Slider}" VerticalAlignment="Center"
+                                    ValueChanged="FlinchSlider_ValueChanged" />
+                            <DockPanel Margin="0,2,0,0">
+                                <TextBlock DockPanel.Dock="Right" Text="100%" Style="{StaticResource Subtext}" />
+                                <TextBlock Text="0%" Style="{StaticResource Subtext}" />
+                            </DockPanel>
+
+                            <Grid Margin="0,16,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Animation" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
+                                <TextBlock x:Name="FlinchAnimValueText" Grid.Column="1" Text="100%"
+                                           Style="{StaticResource Value}" MinWidth="76" />
+                            </Grid>
+                            <Slider x:Name="FlinchAnimSlider" Minimum="0" Maximum="100"
+                                    TickFrequency="5" IsSnapToTickEnabled="True"
+                                    Style="{StaticResource Slider}" VerticalAlignment="Center"
+                                    ValueChanged="FlinchAnimSlider_ValueChanged" />
+                            <DockPanel Margin="0,2,0,0">
+                                <TextBlock DockPanel.Dock="Right" Text="100%" Style="{StaticResource Subtext}" />
+                                <TextBlock Text="0%" Style="{StaticResource Subtext}" />
+                            </DockPanel>
+
+                            <TextBlock x:Name="FlinchHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
+                        </StackPanel>
                     </Grid>
                 </Border>
 

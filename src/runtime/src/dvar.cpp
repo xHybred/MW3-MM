@@ -117,23 +117,40 @@ bool SafeReadF32(uintptr_t address, float& out) {
 
 // cg_fovScale's vanilla value is exactly 1.0, so the band has to include it and
 // anything a player could reasonably scale to.
-bool PlausibleFov(float value) {
-    return value >= 0.05f && value <= 1000.0f;
+bool PlausibleFloat(float value) {
+    return std::isfinite(value) && fabsf(value) <= 10000.0f;
+}
+
+// dvar_t lives in the module's writable .data arena. Requiring writability is
+// what keeps a stray pointer to a copy of the name in .rdata from being read as
+// a dvar, which the value range alone does not reject.
+bool IsWritable(uintptr_t address) {
+    MEMORY_BASIC_INFORMATION mbi{};
+    if (VirtualQuery(reinterpret_cast<LPCVOID>(address), &mbi, sizeof(mbi)) == 0) return false;
+    if (mbi.State != MEM_COMMIT) return false;
+
+    const DWORD writable = PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READWRITE |
+                           PAGE_EXECUTE_WRITECOPY;
+    return (mbi.Protect & writable) != 0 && (mbi.Protect & PAGE_GUARD) == 0;
 }
 
 // dvar_t starts with a pointer to the dvar's name. Walk the image for a pointer
 // to the string we found, then check that the pointed-to struct actually looks
 // like a float dvar and not some unrelated string reference.
-bool ValidateCandidate(uintptr_t address, const char* name, float expectedReset, size_t& valueOffset,
-                       uintptr_t& namePtr) {
-    unsigned char type = 0;
-    if (!SafeReadU8(address + 0x0C, type) || type != 1) return false;
+bool ValidateCandidate(uintptr_t address, const char* name, unsigned char wantType,
+                       float expectedReset, size_t& valueOffset, uintptr_t& namePtr) {
+    if (!IsWritable(address)) return false;
 
-    float current = 0.0f;
-    if (!SafeReadF32(address + 0x10, current) || !PlausibleFov(current)) return false;
+    unsigned char type = 0;
+    if (!SafeReadU8(address + 0x0C, type) || type != wantType) return false;
+
+    if (wantType == 1) {
+        float current = 0.0f;
+        if (!SafeReadF32(address + 0x10, current) || !PlausibleFloat(current)) return false;
+    }
 
     float reset = 0.0f;
-    if (!SafeReadF32(address + 0x30, reset)) return false;
+    const bool hasReset = SafeReadF32(address + 0x30, reset);
 
     const char* candidateName = nullptr;
     __try {
@@ -146,8 +163,10 @@ bool ValidateCandidate(uintptr_t address, const char* name, float expectedReset,
     namePtr = reinterpret_cast<uintptr_t>(candidateName);
     valueOffset = 0x10;
 
-    // If the compiled default is present at the documented reset slot, the
-    // layout is the one we expect. Otherwise derive the value offset from it.
+    // When the compiled default is known and sits at the documented reset slot,
+    // the layout is the one we expect. Otherwise derive the value offset from
+    // it; an expectedReset below zero means there is nothing to look for.
+    if (expectedReset < 0.0f || !hasReset) return true;
     if (fabsf(reset - expectedReset) > 0.001f) {
         for (size_t offset = 0x18; offset + 4 <= 0x60; offset += 4) {
             float probe = 0.0f;
@@ -162,11 +181,7 @@ bool ValidateCandidate(uintptr_t address, const char* name, float expectedReset,
     return true;
 }
 
-}  // namespace
-
-bool g_dvarScanVerbose = false;
-
-bool FindDvar(const char* name, DvarRef& out) {
+bool FindTyped(const char* name, unsigned char wantType, float expectedReset, DvarRef& out) {
     uintptr_t base = 0;
     size_t size = 0;
     if (!ImageRange(base, size)) {
@@ -191,8 +206,6 @@ bool FindDvar(const char* name, DvarRef& out) {
     }
     if (g_dvarScanVerbose) LogF(L"%S: name string at %p", name, reinterpret_cast<void*>(nameAddress));
 
-    const float expectedReset = strcmp(name, "cg_fov") == 0 ? 65.0f : 1.0f;
-
     int hits = 0;
     for (const Range& range : ranges) {
         for (size_t offset = 0; offset + sizeof(uintptr_t) <= range.size; offset += sizeof(uintptr_t)) {
@@ -205,10 +218,11 @@ bool FindDvar(const char* name, DvarRef& out) {
             size_t valueOffset = 0;
             uintptr_t namePtr = 0;
             const uintptr_t address = range.begin + offset;
-            if (ValidateCandidate(address, name, expectedReset, valueOffset, namePtr)) {
+            if (ValidateCandidate(address, name, wantType, expectedReset, valueOffset, namePtr)) {
                 out.addr = address;
                 out.namePtr = namePtr;
                 out.valueOffset = valueOffset;
+                out.type = wantType;
                 if (g_dvarScanVerbose) LogF(L"%S: dvar at %p (+0x%zx)", name, reinterpret_cast<void*>(address), valueOffset);
                 return true;
             }
@@ -219,11 +233,26 @@ bool FindDvar(const char* name, DvarRef& out) {
     return false;
 }
 
+}  // namespace
+
+bool g_dvarScanVerbose = false;
+
+bool FindDvar(const char* name, DvarRef& out) {
+    // cg_fov is the only float whose compiled default we know for certain, and
+    // finding it there is how the value offset gets cross-checked.
+    const float expectedReset = strcmp(name, "cg_fov") == 0 ? 65.0f : -1.0f;
+    return FindTyped(name, 1, expectedReset, out);
+}
+
+bool FindDvarTyped(const char* name, unsigned char type, DvarRef& out) {
+    return FindTyped(name, type, -1.0f, out);
+}
+
 bool StillValid(const DvarRef& dvar, const char* name) {
     if (!dvar.valid()) return false;
 
     unsigned char type = 0;
-    if (!SafeReadU8(dvar.addr + 0x0C, type) || type != 1) return false;
+    if (!SafeReadU8(dvar.addr + 0x0C, type) || type != dvar.type) return false;
 
     uintptr_t namePtr = 0;
     if (!SafeReadPtr(dvar.addr, namePtr) || namePtr != dvar.namePtr) return false;
@@ -242,6 +271,26 @@ void WriteFloat(const DvarRef& dvar, float value) {
     if (!dvar.valid()) return;
     __try {
         *reinterpret_cast<float*>(dvar.addr + dvar.valueOffset) = value;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        LogF(L"write fault at %p", reinterpret_cast<void*>(dvar.addr));
+    }
+}
+
+int ReadInt(const DvarRef& dvar) {
+    int value = 0;
+    if (!dvar.valid()) return value;
+    __try {
+        value = *reinterpret_cast<const int*>(dvar.addr + dvar.valueOffset);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0;
+    }
+    return value;
+}
+
+void WriteInt(const DvarRef& dvar, int value) {
+    if (!dvar.valid()) return;
+    __try {
+        *reinterpret_cast<int*>(dvar.addr + dvar.valueOffset) = value;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         LogF(L"write fault at %p", reinterpret_cast<void*>(dvar.addr));
     }
