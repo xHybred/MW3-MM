@@ -17,6 +17,7 @@ struct ModSettings {
     bool recoilEnabled = true;
     float recoilStrength = 1.0f;
     bool recoilDebug = false;
+    bool swayDebug = false;
     bool swayEnabled = true;
     float swayStrength = 1.0f;
     bool logEffectiveFov = false;

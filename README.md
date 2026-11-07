@@ -134,12 +134,12 @@ stay untouched, so the gun keeps its firing rhythm and only travels less far. Va
 recorded per weapon the first time it is seen, so switching or picking a weapon up never
 compounds the scaling.
 
-Weapon sway is the viewmodel's own drift, and it does not come from weapon data the runtime can
-reach: the engine reads the sway fields from a per-client state object, and writing them there
-made no difference on any weapon the player actually holds. So the runtime hooks the sway update
-instead and scales its output (`iw5sp.exe+0x2D900`, the four smoothed offsets it writes back each
-frame). That works on whatever is in your hands, including a weapon picked up mid-match, and it
-never touches the smoothing, so the drift keeps its shape and only gets smaller.
+Weapon sway is the viewmodel's own idle drift. It is not a weapon field and not a dvar: the engine
+builds three sine terms from a per-player counter and adds them straight onto the first-person view
+angles. The runtime hooks that function (`iw5sp.exe+0x2DD50`), remembers what the angles were before
+it ran, and scales only the difference it added. At 0 the gun is locked to the camera and the world
+keeps moving normally; at 1 it is stock. Because only that function's contribution is scaled, the
+aiming pose, the raise and the weapon animation are untouched.
 
 ## Build
 
