@@ -13,6 +13,7 @@ namespace {
 // pivot is captured from the live dvar, this only keeps the aiming-zoom math
 // sane on the frontend.
 constexpr float kPivotFov = 65.0f;
+constexpr float kMaxFov = 130.0f;
 
 // What the dvars held before we touched them, captured per level so disabling
 // the mod puts the player's own settings back rather than the defaults.
@@ -34,7 +35,7 @@ void ApplySettings(const DvarRef& fovDvar, const DvarRef& scaleDvar, const ModSe
                    const Baseline& baseline) {
     float target = settings.fov;
     if (target < 40.0f) target = 40.0f;
-    if (target > 160.0f) target = 160.0f;
+    if (target > kMaxFov) target = kMaxFov;
 
     const float pivot = baseline.fov;
     const float wantFov = settings.affected ? pivot : target;

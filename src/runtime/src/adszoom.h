@@ -19,6 +19,9 @@ inline constexpr float kDefaultZoom = 1.10f;
 // this; both are here so a bad weapon value cannot drive the view wild.
 inline constexpr float kMaxMagnification = 4.0f;
 
+// Ceiling the manager offers for the zoom slider.
+inline constexpr float kMaxZoom = 1.35f;
+
 // MW3 tunes aim zoom per weapon by feel, so two pistols can differ far more
 // than their sights do. These bands collapse every 1x sight onto the same few
 // numbers, the way newer titles do. Anything past the last split is a real
@@ -42,6 +45,7 @@ void Update(const ModSettings& settings, float pivotFov);
 // Pure arithmetic so it can be exercised without the game.
 inline float MappedMagnification(float vanillaMag, float zoom, bool flat) {
     if (!(zoom >= 1.0f)) zoom = 1.0f;
+    zoom = std::min(zoom, kMaxZoom);
 
     if (flat) return std::min(zoom, kMaxMagnification);
 

@@ -76,7 +76,7 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <Slider x:Name="FovSlider" Minimum="60" Maximum="160"
+                            <Slider x:Name="FovSlider" Minimum="60" Maximum="130"
                                     TickFrequency="1" IsSnapToTickEnabled="True"
                                     Style="{StaticResource Slider}" VerticalAlignment="Center"
                                     ValueChanged="FovSlider_ValueChanged" />
@@ -86,7 +86,7 @@
                         </Grid>
 
                         <DockPanel Grid.Row="2" Margin="0,2,0,0">
-                            <TextBlock DockPanel.Dock="Right" Text="160" Style="{StaticResource Subtext}" />
+                            <TextBlock DockPanel.Dock="Right" Text="130" Style="{StaticResource Subtext}" />
                             <TextBlock Text="60" Style="{StaticResource Subtext}" />
                         </DockPanel>
 
@@ -108,12 +108,12 @@
                                 <TextBlock x:Name="AimValueText" Grid.Column="1" Text="110%"
                                            Style="{StaticResource Value}" MinWidth="76" />
                             </Grid>
-                            <Slider x:Name="AimSlider" Minimum="100" Maximum="200"
+                            <Slider x:Name="AimSlider" Minimum="100" Maximum="135"
                                     TickFrequency="1" IsSnapToTickEnabled="True"
                                     Style="{StaticResource Slider}" VerticalAlignment="Center"
                                     Margin="0,8,0,0" ValueChanged="AimSlider_ValueChanged" />
                             <DockPanel Margin="0,2,0,0">
-                                <TextBlock DockPanel.Dock="Right" Text="200%" Style="{StaticResource Subtext}" />
+                                <TextBlock DockPanel.Dock="Right" Text="135%" Style="{StaticResource Subtext}" />
                                 <TextBlock Text="100%" Style="{StaticResource Subtext}" />
                             </DockPanel>
                             <CheckBox x:Name="FlatSwitch" Margin="0,14,0,0"
@@ -160,13 +160,16 @@
                         <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,14" />
 
                         <DockPanel>
-                            <Button x:Name="DxvkButton" DockPanel.Dock="Right" Content="Install from file..."
-                                    Click="Dxvk_Click" MinWidth="96" VerticalAlignment="Top"
-                                    Margin="12,0,0,0" />
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,0,0,0">
+                                <Button x:Name="DxvkFileButton" Content="From file..." Click="DxvkFile_Click"
+                                        Padding="11,4" Margin="0,0,8,0" />
+                                <Button x:Name="DxvkButton" Content="Install" Click="Dxvk_Click"
+                                        MinWidth="96" />
+                            </StackPanel>
                             <StackPanel>
                                 <TextBlock Text="DXVK (Vulkan renderer)" Style="{StaticResource Section}" />
                                 <TextBlock x:Name="DxvkDetail"
-                                           Text="Optional. Drop in DXVK's d3d9.dll to render through Vulkan instead of D3D9."
+                                           Text="Optional. Renders through Vulkan instead of D3D9."
                                            Style="{StaticResource Subtext}" Margin="0,3,0,0" />
                             </StackPanel>
                         </DockPanel>

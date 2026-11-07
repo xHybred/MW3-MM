@@ -1,7 +1,9 @@
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -16,6 +18,7 @@ public partial class MainWindow : Window
     private ModConfig _config = new();
     private string? _gameDir;
     private bool _loading = true;
+    private bool _dxvkBusy;
 
     private readonly DispatcherTimer _statusTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromMilliseconds(300) };
@@ -35,8 +38,8 @@ public partial class MainWindow : Window
         _config = ModConfig.Load();
 
         _loading = true;
-        FovSlider.Value = Math.Clamp(_config.Fov, 60f, 160f);
-        AimSlider.Value = Math.Clamp(_config.AimZoom * 100f, 100f, 200f);
+        FovSlider.Value = Math.Clamp(_config.Fov, 60f, ModConfig.MaxFov);
+        AimSlider.Value = Math.Clamp(_config.AimZoom * 100f, 100f, ModConfig.MaxZoom * 100f);
         EnabledSwitch.IsChecked = _config.Enabled;
         AffectedSwitch.IsChecked = _config.Affected;
         FlatSwitch.IsChecked = _config.AimFlat;
@@ -100,11 +103,16 @@ public partial class MainWindow : Window
     private void RefreshDxvkRow()
     {
         bool installed = RuntimeInstaller.DxvkInstalled(_gameDir);
-        DxvkButton.Content = installed ? "Remove" : "Install from file...";
-        DxvkButton.IsEnabled = _gameDir is not null;
+        string? version = RuntimeInstaller.DxvkVersion(_gameDir);
+
+        DxvkButton.Content = installed ? "Remove" : "Install";
+        DxvkButton.IsEnabled = _gameDir is not null && !_dxvkBusy;
+        DxvkFileButton.Visibility = installed ? Visibility.Collapsed : Visibility.Visible;
+        DxvkFileButton.IsEnabled = _gameDir is not null && !_dxvkBusy;
+
         DxvkDetail.Text = installed
-            ? "Installed as d3d9.dll."
-            : "Optional. Drop in DXVK's d3d9.dll to render through Vulkan instead of D3D9.";
+            ? version is null ? "Installed as d3d9.dll." : $"DXVK {version} installed as d3d9.dll."
+            : "Optional. Downloads the latest release from GitHub and renders through Vulkan.";
     }
 
     private void UpdateFovUi()
@@ -140,13 +148,17 @@ public partial class MainWindow : Window
         GameDot.Fill = Brush(running ? "Accent" : "Dim");
         GameStateText.Text = running ? "Game running" : "Game not running";
 
-        string? line = LastLogLine();
-        if (running && line is not null)
-            StatusText.Text = line;
-        else if (line is not null)
-            StatusText.Text = "Last session: " + line;
-        else
-            StatusText.Text = "Ready";
+        // A download owns the status line until it finishes.
+        if (!_dxvkBusy)
+        {
+            string? line = LastLogLine();
+            if (running && line is not null)
+                StatusText.Text = line;
+            else if (line is not null)
+                StatusText.Text = "Last session: " + line;
+            else
+                StatusText.Text = "Ready";
+        }
 
         // The installed DLL is easy to swap, so recheck while the window is open.
         RefreshRuntimeRow();
@@ -247,35 +259,83 @@ public partial class MainWindow : Window
         Refresh();
     }
 
-    private void Dxvk_Click(object sender, RoutedEventArgs e)
+    private async void Dxvk_Click(object sender, RoutedEventArgs e)
     {
-        if (_gameDir is null) return;
+        if (_gameDir is null || _dxvkBusy) return;
         if (GuardGameRunning()) return;
+
+        if (RuntimeInstaller.DxvkInstalled(_gameDir))
+        {
+            try
+            {
+                RuntimeInstaller.RemoveDxvk(_gameDir);
+                StatusText.Text = "DXVK removed. The game is back on D3D9.";
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Fail("Could not change DXVK", ex);
+            }
+
+            Refresh();
+            return;
+        }
+
+        _dxvkBusy = true;
+        RefreshDxvkRow();
+
+        string work = Path.Combine(Path.GetTempPath(), "MW3Mod");
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+
+            StatusText.Text = "Looking up the latest DXVK release...";
+            var release = await DxvkDownloader.FindLatestAsync(http, CancellationToken.None);
+
+            string folder = Path.Combine(work, "dxvk-" + release.Tag);
+            var progress = new Progress<double>(fraction =>
+                StatusText.Text = $"Downloading DXVK {release.Tag}... {(int)(fraction * 100)}%");
+
+            string dll = await DxvkDownloader.DownloadAsync(
+                http, release, folder, progress, CancellationToken.None);
+
+            RuntimeInstaller.InstallDxvk(_gameDir, dll);
+            StatusText.Text = $"DXVK {release.Tag} installed. Start the game to render through Vulkan.";
+
+            try { Directory.Delete(folder, recursive: true); } catch (IOException) { }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or IOException
+                                       or UnauthorizedAccessException or JsonException or TaskCanceledException)
+        {
+            Fail("Could not install DXVK", ex);
+        }
+        finally
+        {
+            _dxvkBusy = false;
+            Refresh();
+        }
+    }
+
+    private void DxvkFile_Click(object sender, RoutedEventArgs e)
+    {
+        if (_gameDir is null || _dxvkBusy) return;
+        if (GuardGameRunning()) return;
+
+        var dialog = new OpenFileDialog
+        {
+            Title = "Pick DXVK's x64 d3d9.dll",
+            Filter = "d3d9.dll|d3d9.dll|DLL files|*.dll",
+            CheckFileExists = true,
+        };
+        if (dialog.ShowDialog(this) != true) return;
 
         try
         {
-            if (RuntimeInstaller.DxvkInstalled(_gameDir))
-            {
-                RuntimeInstaller.RemoveDxvk(_gameDir);
-                StatusText.Text = "DXVK removed.";
-            }
-            else
-            {
-                var dialog = new OpenFileDialog
-                {
-                    Title = "Pick DXVK's x64 d3d9.dll",
-                    Filter = "d3d9.dll|d3d9.dll|DLL files|*.dll",
-                    CheckFileExists = true,
-                };
-                if (dialog.ShowDialog(this) != true) return;
-
-                RuntimeInstaller.InstallDxvk(_gameDir, dialog.FileName);
-                StatusText.Text = "DXVK installed as d3d9.dll.";
-            }
+            RuntimeInstaller.InstallDxvk(_gameDir, dialog.FileName);
+            StatusText.Text = "DXVK installed as d3d9.dll.";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
-            Fail("Could not change DXVK", ex);
+            Fail("Could not install DXVK", ex);
         }
 
         Refresh();

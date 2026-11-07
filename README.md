@@ -45,9 +45,9 @@ apply without a restart.
 | --- | --- |
 | `[FOV] Enabled` | 1 applies the override, 0 restores your own dvars |
 | `[FOV] Affected` | 1 scales ADS with your FOV, 0 keeps the aiming FOV fixed |
-| `[FOV] Value` | total hipfire FOV, clamped to 40..160 |
+| `[FOV] Value` | total hipfire FOV, clamped to 40..130 |
 | `[Aim] Enabled` | 1 applies the aiming zoom, 0 leaves the weapon data alone |
-| `[Aim] Zoom` | how much a 1x sight zooms, 1.0 = no zoom, 1.1 = default |
+| `[Aim] Zoom` | how much a 1x sight zooms, 1.0 = no zoom, 1.1 = default, 1.35 max |
 | `[Aim] Flat` | 0 keeps scopes magnified, 1 gives every weapon the same zoom |
 | `[Debug] LogEffectiveFov` | log each weapon's aim FOV when it changes |
 | `[Debug] DvarScan` | log every step of the dvar lookup |
@@ -112,8 +112,9 @@ Output: `out\MW3Mod.dll` and `out\manager\`. The runtime alone is `.\build.ps1`.
   is expected.
 - Multiplayer is not supported or tested. Do not use anything like this with Plutonium -
   its anti-cheat treats injected DLLs as cheating.
-- The manager can also drop in a DXVK `d3d9.dll` for a Vulkan renderer. The proxy sits on
-  `X3DAudio1_7.dll`, so the two do not collide. DXVK is not included.
+- The manager can also install DXVK for a Vulkan renderer, either by downloading the latest
+  release from dxvk's GitHub or from a `d3d9.dll` you already have. The proxy sits on
+  `X3DAudio1_7.dll`, so the two do not collide. DXVK is not bundled with the mod.
 - `tools\` holds the throwaway scripts used while reversing: `set_fov.py` writes the dvars
   in a running game from outside, `inspect.py` dumps candidate dvar structs, and
   `patch_weapon_fov.py` served as the proof that overriding the weapon ADS FOV is enough

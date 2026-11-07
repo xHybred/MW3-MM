@@ -7,6 +7,12 @@ namespace MW3ModManager;
 // GetPrivateProfileString, so the two never disagree about a key name.
 public sealed class ModConfig
 {
+    // Kept in step with the runtime's own clamps in dllmain.cpp and adszoom.cpp.
+    public const float MinFov = 40f;
+    public const float MaxFov = 130f;
+    public const float MinZoom = 1.0f;
+    public const float MaxZoom = 1.35f;
+
     public bool Enabled { get; set; } = true;
     public bool Affected { get; set; } = true;
     public float Fov { get; set; } = 90f;
@@ -54,7 +60,7 @@ public sealed class ModConfig
                     case "affected": config.Affected = ParseBool(value, config.Affected); break;
                     case "value":
                         if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float fov))
-                            config.Fov = Math.Clamp(fov, 40f, 160f);
+                            config.Fov = Math.Clamp(fov, MinFov, MaxFov);
                         break;
                 }
             }
@@ -66,7 +72,7 @@ public sealed class ModConfig
                     case "flat": config.AimFlat = ParseBool(value, config.AimFlat); break;
                     case "zoom":
                         if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float zoom))
-                            config.AimZoom = Math.Clamp(zoom, 1f, 2f);
+                            config.AimZoom = Math.Clamp(zoom, MinZoom, MaxZoom);
                         break;
                 }
             }

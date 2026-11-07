@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace MW3ModManager;
 
@@ -46,39 +47,75 @@ public static class RuntimeInstaller
 
     public static bool DxvkInstalled(string? gameDir) =>
         gameDir is not null && File.Exists(Path.Combine(gameDir, DxvkName)) &&
-        FileContains(Path.Combine(gameDir, DxvkName), "DXVK");
+        Probe(Path.Combine(gameDir, DxvkName)).Ours;
+
+    public static string? DxvkVersion(string? gameDir) =>
+        gameDir is null ? null : Probe(Path.Combine(gameDir, DxvkName)).Version;
 
     public static void InstallDxvk(string gameDir, string sourceDll)
     {
-        if (!FileContains(sourceDll, "DXVK"))
+        if (!Probe(sourceDll).Ours)
             throw new InvalidOperationException("That file does not look like a DXVK d3d9.dll.");
 
         File.Copy(sourceDll, Path.Combine(gameDir, DxvkName), overwrite: true);
+        Probed.Clear();
     }
 
     public static bool RemoveDxvk(string gameDir)
     {
         string path = Path.Combine(gameDir, DxvkName);
-        if (!File.Exists(path) || !FileContains(path, "DXVK")) return false;
+        if (!File.Exists(path) || !Probe(path).Ours) return false;
         File.Delete(path);
+        Probed.Clear();
         return true;
     }
 
-    private static bool FileContains(string path, string needle)
+    private sealed record DllProbe(bool Ours, string? Version);
+
+    // Answers cost a full read of a 7 MB DLL, so keep each answer until the file changes.
+    private static readonly Dictionary<string, (long Length, DateTime Written, DllProbe Probe)> Probed = [];
+
+    private static DllProbe Probe(string path)
     {
         try
         {
+            var file = new FileInfo(path);
+            if (Probed.TryGetValue(path, out var known) &&
+                known.Length == file.Length && known.Written == file.LastWriteTimeUtc)
+            {
+                return known.Probe;
+            }
+
             byte[] bytes = File.ReadAllBytes(path);
-            return bytes.AsSpan().IndexOf(Encoding.ASCII.GetBytes(needle)) >= 0;
+            bool ours = bytes.AsSpan().IndexOf("DXVK"u8) >= 0;
+            var probe = new DllProbe(ours, ours ? FindVersion(bytes) : null);
+            Probed[path] = (file.Length, file.LastWriteTimeUtc, probe);
+            return probe;
+        }
+        catch (FileNotFoundException)
+        {
+            return new DllProbe(false, null);
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return new DllProbe(false, null);
         }
         catch (IOException)
         {
-            return false;
+            return new DllProbe(false, null);
         }
         catch (UnauthorizedAccessException)
         {
-            return false;
+            return new DllProbe(false, null);
         }
+    }
+
+    // DXVK ships a fake Windows version resource, but stamps the real number into
+    // the image next to its build line ("v3.1.1 Build: x86_64").
+    private static string? FindVersion(byte[] bytes)
+    {
+        var match = Regex.Match(Encoding.ASCII.GetString(bytes), @"\bv(\d+\.\d+\.\d+)\b");
+        return match.Success ? match.Groups[1].Value : null;
     }
 
     private static string? ReadVersionString(string path, string prefix)
