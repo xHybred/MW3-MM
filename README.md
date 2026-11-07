@@ -156,13 +156,15 @@ definition). Nothing in the game exposes it as a setting, so the runtime clears 
 toggle is off and puts it back when it is on. The smoke puff at the barrel comes from the same asset,
 so both go together. A null effect pointer is safe; the engine simply spawns nothing.
 
-The gun is placed relative to the camera with a forward offset along the view axis, applied in
-`iw5sp.exe+0x6FD70` (the same `cg_gun_z` the console exposes). Because the gun sits at the camera and
-extends forward, moving it along that axis changes its apparent size without touching the world. The
-runtime adds `offset = 3.5 * (1 - 1/k)` with `k = (tan(fov/2) / tan(pivot/2))^(1 - influence)`, so at
+The gun is placed relative to the camera, and `iw5sp.exe+0x6FD70` offsets it along the view's own
+right, forward and up axes (the same axes `cg_gun_x`, `cg_gun_y` and `cg_gun_z` drive). The forward one
+changes its apparent size without touching the world: because the gun root sits at the camera and the
+model extends forward, moving it back makes it larger and moving it forward makes it smaller. The
+runtime adds `offset = -3.5 * (1 - 1/k)` with `k = (tan(fov/2) / tan(pivot/2))^(1 - influence)`, so at
 influence 1 the offset is zero and nothing is written; 0 cancels the shrink entirely; values above 1
 push the gun further than stock. The offset is faded out by the aim fraction so aiming is untouched,
-and clamped to three units so the gun cannot pass through the camera or clip into the world.
+and clamped to 1.5 units towards the camera and 3 units away, because pulling the model in any further
+runs it through the near plane.
 
 ## Build
 

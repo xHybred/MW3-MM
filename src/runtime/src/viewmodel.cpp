@@ -22,7 +22,10 @@ namespace
     constexpr unsigned char kPrologue[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x6C, 0x24, 0x10};
 
     constexpr size_t kOriginVector = 0x10;
-    constexpr size_t kForwardAxis = 0x26AA0;
+    // client+0x26A88/0x26A94/0x26AA0 are the view's right, forward and up
+    // axes: cg_gun_x moves the gun sideways, cg_gun_y along the view axis and
+    // cg_gun_z vertically. Only the forward one changes apparent size.
+    constexpr size_t kForwardAxis = 0x26A94;
     constexpr size_t kAimFraction = 0x338;
 
     // Distance from the camera to the visible part of the gun, measured by
@@ -30,7 +33,11 @@ namespace
     // turn a wanted size ratio into a distance, so an approximate value keeps
     // the slider proportional.
     constexpr float kGunDistance = 3.5f;
-    constexpr float kMaxOffset = 3.0f;
+    // axB points away from the camera, so a positive offset shrinks the gun and
+    // a negative one pulls it closer. Pulling it in past about a metre runs the
+    // model through the near plane, so the two sides are capped differently.
+    constexpr float kMaxPullIn = 1.5f;
+    constexpr float kMaxPushOut = 3.0f;
     constexpr float kPi = 3.14159265358979f;
 
     using OriginFn = void (*)(void*, void*, void*, void*);
@@ -59,8 +66,8 @@ namespace
         if (!std::isfinite(k) || k < 0.05f || k > 20.0f)
             return 0.0f;
 
-        const float offset = kGunDistance * (1.0f - 1.0f / k);
-        return std::clamp(offset, -kMaxOffset, kMaxOffset);
+        const float offset = -kGunDistance * (1.0f - 1.0f / k);
+        return std::clamp(offset, -kMaxPullIn, kMaxPushOut);
     }
 
     void __fastcall HookedOrigin(void* client, void* out, void* in, void* a4)
