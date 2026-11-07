@@ -260,7 +260,7 @@
                                            Style="{StaticResource Value}" MinWidth="76" />
                             </Grid>
                             <Slider x:Name="SwaySlider" Minimum="0" Maximum="100"
-                                    TickFrequency="5" IsSnapToTickEnabled="True"
+                                    TickFrequency="1" IsSnapToTickEnabled="True"
                                     Style="{StaticResource Slider}" VerticalAlignment="Center"
                                     ValueChanged="SwaySlider_ValueChanged" />
                             <DockPanel Margin="0,2,0,0">
