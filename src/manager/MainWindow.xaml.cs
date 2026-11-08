@@ -39,6 +39,11 @@ public partial class MainWindow : Window
         _gameDir = GameLocator.FindGame();
         _config = ModConfig.Load();
 
+        // config.cfg is what the game reads before its first frame, so when it
+        // exists it is the truth about the intro setting, not the ini.
+        if (IntroOption.ConfigPath(_gameDir) is string introConfig && File.Exists(introConfig))
+            _config.SkipIntro = IntroOption.IsSkipped(_gameDir);
+
         // These cards no longer have a master switch: the sliders are the whole
         // control, and the stock end of each slider is what leaves the game alone.
         _config.FlinchEnabled = true;
@@ -71,6 +76,7 @@ public partial class MainWindow : Window
     /// <summary>Pushes the loaded configuration into every control at once.</summary>
     private void ApplyConfigToControls()
     {
+        IntroSwitch.IsChecked = _config.SkipIntro;
         FovSlider.Value = Math.Clamp(_config.Fov, 60f, ModConfig.MaxFov);
         AimSlider.Value = Math.Clamp(_config.AimZoom * 100f, 100f, ModConfig.MaxZoom * 100f);
         EnabledSwitch.IsChecked = _config.Enabled;
@@ -387,6 +393,10 @@ public partial class MainWindow : Window
 
         SetSwitchLabel(EnabledSwitch, _config.Enabled);
         SetSwitchLabel(AimSwitch, _config.AimEnabled);
+        SetSwitchLabel(IntroSwitch, _config.SkipIntro);
+        IntroHint.Text = _config.SkipIntro
+            ? "The opening movie is skipped, so the game goes straight to the menu."
+            : "The opening movie plays on launch.";
         SetSwitchLabel(FlashSwitch, !_config.FlashEnabled);
         SetSwitchLabel(ViewmodelSwitch, _config.ViewmodelEnabled);
         SetSwitchLabel(CrosshairSwitch, _config.CrosshairEnabled);
@@ -416,6 +426,38 @@ public partial class MainWindow : Window
 
         // The installed DLL is easy to swap, so recheck while the window is open.
         RefreshRuntimeRow();
+    }
+
+    private void Intro_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+
+        bool skip = IntroSwitch.IsChecked == true;
+        _config.SkipIntro = skip;
+        UpdateFovUi();
+        SaveLater();
+
+        if (_gameDir is null) return;
+        if (Process.GetProcessesByName("iw5sp").Length > 0)
+        {
+            StatusText.Text = "Close the game first - it rewrites config.cfg when it exits.";
+            _statusHoldUntil = Environment.TickCount64 + 4000;
+            return;
+        }
+
+        try
+        {
+            IntroOption.SetSkip(_gameDir, skip);
+            StatusText.Text = skip
+                ? "The next launch goes straight to the main menu."
+                : "The opening movie will play again.";
+            _statusHoldUntil = Environment.TickCount64 + 4000;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            StatusText.Text = "Could not edit config.cfg: " + ex.Message;
+            _statusHoldUntil = Environment.TickCount64 + 4000;
+        }
     }
 
     private void FovSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)

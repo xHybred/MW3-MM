@@ -559,6 +559,24 @@
             <ScrollViewer x:Name="PageSetup" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
                 <StackPanel>
                     <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <DockPanel>
+                                <CheckBox x:Name="IntroSwitch" DockPanel.Dock="Right" Content="Off"
+                                          Style="{StaticResource Switch}" VerticalAlignment="Top"
+                                          Margin="12,0,0,0" Checked="Intro_Changed" Unchecked="Intro_Changed" />
+                                <StackPanel>
+                                    <TextBlock Text="Skip intro" Style="{StaticResource Section}" />
+                                    <TextBlock x:Name="IntroHint" Style="{StaticResource Subtext}" Margin="0,3,0,0"
+                                               Text="Launch straight to the main menu." />
+                                </StackPanel>
+                            </DockPanel>
+
+                            <TextBlock Margin="0,12,0,0" Style="{StaticResource Subtext}" Opacity="0.7"
+                                       Text="The game reads this before its first frame, so close the game before changing it." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
                         <DockPanel>
                             <Button x:Name="RuntimeButton" DockPanel.Dock="Right" Content="Install"
                                     Click="Runtime_Click" MinWidth="96" VerticalAlignment="Top"

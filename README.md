@@ -74,6 +74,9 @@ Opacity=1
 Dynamic=0
 Show=1
 Style=0
+
+[Startup]
+SkipIntro=0
 ```
 
 **Remove** in the manager (or deleting that one DLL) puts the game back to vanilla.
@@ -112,6 +115,7 @@ apply without a restart.
 | `[Crosshair] Dynamic` | 1 lets the crosshair open up with your spread, 0 keeps it fixed |
 | `[Crosshair] Show` | 0 hides the crosshair entirely |
 | `[Crosshair] Style` | 0 draws the game's own crosshair, 1 the same bars drawn by the mod, 2 a Halo-style ring |
+| `[Startup] SkipIntro` | 1 launches straight to the main menu, 0 plays the opening movie. The manager writes this into `players2\config.cfg` |
 | `[Debug] LogEffectiveFov` | log each weapon's aim FOV when it changes |
 | `[Debug] DvarScan` | log every step of the dvar lookup |
 
@@ -229,6 +233,13 @@ shape stays readable against a bright sky; the outline's alpha follows the cross
 Opacity fades it with the bars. Both scale with `[Crosshair] Size` and follow
 `cg_crosshairVerticalOffset`. A custom style does not open up with spread, so `[Crosshair] Dynamic`
 only shows with style 0.
+
+The opening movie is not a file the engine streams blindly: it is gated by the archived `intro` dvar,
+which the game reads from `players2\config.cfg` before it draws a frame. `[Startup] SkipIntro` makes
+the manager rewrite that one line to `seta intro "0"`, leaving the rest of the file byte for byte as it
+was. The runtime cannot do this, because the engine resolves the dvar and starts the movie long before
+the proxy's thread gets a look, so the toggle needs the manager and a closed game. The game rewrites
+`config.cfg` when it exits, which is why the manager refuses to touch it while the game is running.
 
 ## Build
 
