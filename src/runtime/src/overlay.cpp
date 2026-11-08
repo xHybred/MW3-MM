@@ -47,6 +47,43 @@ struct Vertex {
 };
 constexpr DWORD kFvf = D3DFVF_XYZRHW | D3DFVF_DIFFUSE;
 
+// Outline is a dark copy of each shape, grown by the same amount on every side.
+constexpr float kOutlineAlpha = 0.55f;
+constexpr float kBarThickness = 2.5f;
+constexpr float kBarGap = 3.5f;
+constexpr float kBarLength = 8.5f;
+constexpr float kBarDot = 1.2f;
+constexpr float kRingOuter = 15.0f;
+constexpr float kRingThickness = 2.2f;
+constexpr float kRingDot = 1.6f;
+
+struct Batch {
+    Vertex vertices[1024];
+    int count = 0;
+
+    void Triangle(float x0, float y0, float x1, float y1, float x2, float y2, DWORD color) {
+        if (count + 3 > 1024) return;
+        vertices[count++] = {x0, y0, 0.0f, 1.0f, color};
+        vertices[count++] = {x1, y1, 0.0f, 1.0f, color};
+        vertices[count++] = {x2, y2, 0.0f, 1.0f, color};
+    }
+
+    void Rect(float x0, float y0, float x1, float y1, DWORD color) {
+        Triangle(x0, y0, x1, y0, x1, y1, color);
+        Triangle(x0, y0, x1, y1, x0, y1, color);
+    }
+
+    void Draw(IDirect3DDevice9* device) const {
+        if (count < 3) return;
+        device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, count / 3, vertices, sizeof(Vertex));
+    }
+};
+
+DWORD OutlineColor(DWORD color) {
+    const unsigned alpha = (color >> 24) & 0xFFu;
+    return static_cast<unsigned>(alpha * kOutlineAlpha + 0.5f) << 24;
+}
+
 void DrawBars(IDirect3DDevice9* device, const D3DVIEWPORT9& vp) {
     const float h = static_cast<float>(vp.Height);
     const float w = static_cast<float>(vp.Width);
@@ -55,38 +92,35 @@ void DrawBars(IDirect3DDevice9* device, const D3DVIEWPORT9& vp) {
     const float alpha = g_alpha.load(std::memory_order_relaxed);
     if (alpha <= 0.001f) return;
 
-    const float thickness = 2.5f * scale;
-    const float gap = 4.0f * scale * size;
-    const float length = 11.0f * scale * size;
+    const float thickness = kBarThickness * scale;
+    const float gap = kBarGap * scale * size;
+    const float length = kBarLength * scale * size;
+    const float half = thickness * 0.5f;
+    const float dot = kBarDot * scale * size;
     const float cx = w * 0.5f;
     const float cy = h * 0.5f + g_verticalOffset.load(std::memory_order_relaxed) * scale;
 
-    const DWORD color = g_color.load(std::memory_order_relaxed);
-    Vertex vertices[24];
-    int n = 0;
-
-    auto rect = [&](float x0, float y0, float x1, float y1) {
-        vertices[n++] = {x0, y0, 0.0f, 1.0f, color};
-        vertices[n++] = {x1, y0, 0.0f, 1.0f, color};
-        vertices[n++] = {x1, y1, 0.0f, 1.0f, color};
-        vertices[n++] = {x0, y0, 0.0f, 1.0f, color};
-        vertices[n++] = {x1, y1, 0.0f, 1.0f, color};
-        vertices[n++] = {x0, y1, 0.0f, 1.0f, color};
+    float rects[5][4] = {
+        {cx - half, cy - gap - length, cx + half, cy - gap},
+        {cx - half, cy + gap, cx + half, cy + gap + length},
+        {cx - gap - length, cy - half, cx - gap, cy + half},
+        {cx + gap, cy - half, cx + gap + length, cy + half},
+        {cx - dot, cy - dot, cx + dot, cy + dot},
     };
 
-    const float half = thickness * 0.5f;
-    rect(cx - half, cy - gap - length, cx + half, cy - gap);
-    rect(cx - half, cy + gap, cx + half, cy + gap + length);
-    rect(cx - gap - length, cy - half, cx - gap, cy + half);
-    rect(cx + gap, cy - half, cx + gap + length, cy + half);
+    const DWORD color = g_color.load(std::memory_order_relaxed);
+    const DWORD outlineColor = OutlineColor(color);
+    const float outline = fminf(1.0f * scale, thickness * 0.35f);
 
-    device->SetTexture(0, nullptr);
-    device->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
-    device->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_DIFFUSE);
-    device->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
-    device->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_DIFFUSE);
-    device->SetFVF(kFvf);
-    device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, 8, vertices, sizeof(Vertex));
+    Batch outlineBatch;
+    Batch fillBatch;
+    for (const auto& r : rects) {
+        outlineBatch.Rect(r[0] - outline, r[1] - outline, r[2] + outline, r[3] + outline,
+                          outlineColor);
+        fillBatch.Rect(r[0], r[1], r[2], r[3], color);
+    }
+    outlineBatch.Draw(device);
+    fillBatch.Draw(device);
 }
 
 // A ring broken by four gaps at the cardinal directions, with a small centre
@@ -101,58 +135,54 @@ void DrawRing(IDirect3DDevice9* device, const D3DVIEWPORT9& vp) {
 
     const float cx = w * 0.5f;
     const float cy = h * 0.5f + g_verticalOffset.load(std::memory_order_relaxed) * scale;
-    const float outer = 15.0f * scale * size;
-    const float inner = outer - 2.2f * scale;
-    const float dot = 1.6f * scale;
+    const float outer = kRingOuter * scale * size;
+    const float inner = outer - kRingThickness * scale;
+    const float dot = kRingDot * scale * size;
+    const float outline = 1.0f * scale;
+    const DWORD outlineColor = OutlineColor(color);
 
     constexpr int kSegments = 96;
     constexpr float kPi = 3.14159265358979323846f;
     constexpr float kGap = 0.20f;  // radians either side of each cardinal
 
-    Vertex vertices[512];
-    int n = 0;
+    auto ring = [&](Batch& batch, float outRadius, float inRadius, float dotHalf,
+                    DWORD vertexColor) {
+        for (int i = 0; i < kSegments; ++i) {
+            const float a0 = (2.0f * kPi * i) / kSegments;
+            const float a1 = (2.0f * kPi * (i + 1)) / kSegments;
+            const float mid = (a0 + a1) * 0.5f;
+            const float nearest = fabsf(remainderf(mid, kPi * 0.5f));
+            if (nearest < kGap) continue;
 
-    auto add = [&](float x, float y) {
-        if (n < 512) vertices[n++] = {x, y, 0.0f, 1.0f, color};
+            const float c0 = cosf(a0), s0 = sinf(a0);
+            const float c1 = cosf(a1), s1 = sinf(a1);
+            batch.Triangle(cx + c0 * outRadius, cy + s0 * outRadius,
+                           cx + c0 * inRadius, cy + s0 * inRadius,
+                           cx + c1 * outRadius, cy + s1 * outRadius, vertexColor);
+            batch.Triangle(cx + c1 * outRadius, cy + s1 * outRadius,
+                           cx + c0 * inRadius, cy + s0 * inRadius,
+                           cx + c1 * inRadius, cy + s1 * inRadius, vertexColor);
+        }
+        batch.Rect(cx - dotHalf, cy - dotHalf, cx + dotHalf, cy + dotHalf, vertexColor);
     };
 
-    for (int i = 0; i < kSegments; ++i) {
-        const float a0 = (2.0f * kPi * i) / kSegments;
-        const float a1 = (2.0f * kPi * (i + 1)) / kSegments;
-        const float mid = (a0 + a1) * 0.5f;
-        const float nearest = fabsf(remainderf(mid, kPi * 0.5f));
-        if (nearest < kGap) continue;
+    Batch outlineBatch;
+    Batch fillBatch;
+    ring(outlineBatch, outer + outline, inner - outline, dot + outline, outlineColor);
+    ring(fillBatch, outer, inner, dot, color);
+    outlineBatch.Draw(device);
+    fillBatch.Draw(device);
+}
 
-        const float c0 = cosf(a0), s0 = sinf(a0);
-        const float c1 = cosf(a1), s1 = sinf(a1);
-        add(cx + c0 * outer, cy + s0 * outer);
-        add(cx + c0 * inner, cy + s0 * inner);
-        add(cx + c1 * outer, cy + s1 * outer);
-        add(cx + c1 * outer, cy + s1 * outer);
-        add(cx + c0 * inner, cy + s0 * inner);
-        add(cx + c1 * inner, cy + s1 * inner);
-    }
-
-    // Centre dot as two triangles.
-    add(cx - dot, cy - dot);
-    add(cx + dot, cy - dot);
-    add(cx + dot, cy + dot);
-    add(cx - dot, cy - dot);
-    add(cx + dot, cy + dot);
-    add(cx - dot, cy + dot);
-
+void ApplyDrawState(IDirect3DDevice9* device) {
+    device->SetVertexShader(nullptr);
+    device->SetPixelShader(nullptr);
     device->SetTexture(0, nullptr);
     device->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
     device->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_DIFFUSE);
     device->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
     device->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_DIFFUSE);
     device->SetFVF(kFvf);
-    device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, n / 3, vertices, sizeof(Vertex));
-}
-
-void ApplyDrawState(IDirect3DDevice9* device) {
-    device->SetVertexShader(nullptr);
-    device->SetPixelShader(nullptr);
     device->SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE);
     device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
     device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);

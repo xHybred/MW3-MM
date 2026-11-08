@@ -219,9 +219,12 @@ textured quads fed by an 8x8 texture (`side_small`) with linear filtering and no
 it. The runtime takes the D3D9 device from `Direct3DCreate9`/`CreateDevice` and, at the swap chain's
 `Present`, draws the crosshair itself as geometry in screen pixels, using the colour the engine's
 own drawer computed (so the red crosshair over an enemy still shows) and skipping the engine's
-draw. Style 1 is the same four bars, sharp; style 2 is a ring with four gaps and a centre dot. Both
-scale with `[Crosshair] Size` and follow `cg_crosshairVerticalOffset`. A custom style does not open
-up with spread, so `[Crosshair] Dynamic` only shows with style 0.
+draw. Style 1 is the same four bars, slightly shorter and with a centre dot; style 2 is a ring with
+four gaps and a centre dot. Both draw a dark outline first, grown one pixel on every side, so the
+shape stays readable against a bright sky; the outline's alpha follows the crosshair's, so lowering
+Opacity fades it with the bars. Both scale with `[Crosshair] Size` and follow
+`cg_crosshairVerticalOffset`. A custom style does not open up with spread, so `[Crosshair] Dynamic`
+only shows with style 0.
 
 ## Build
 
