@@ -100,7 +100,7 @@ apply without a restart.
 | `[Spread] Bloom` | 0..1, how much of the per-shot cone growth is removed. 1 = sustained fire stays as tight as the first shot |
 | `[Viewmodel] Enabled` | 1 applies the three offsets below, 0 leaves the gun where the game puts it |
 | `[Viewmodel] XOffset` | -1.5..3, pulls the gun in (negative) for the oversized side pose, pushes it out (positive) |
-| `[Viewmodel] ZOffset` | -3..3, moves the gun in (negative) and out (positive) as it slides |
+| `[Viewmodel] ZOffset` | -3..3, slides the gun left (negative) or right (positive) |
 | `[Viewmodel] YOffset` | -3..3, slides the gun down (negative) or up (positive) |
 | `[Crosshair] Enabled` | 1 applies the settings below, 0 restores your own dvars |
 | `[Crosshair] Size` | 0.5..2.0, how large the crosshair is drawn. 1 = stock |
@@ -182,13 +182,13 @@ toggle is off and puts it back when it is on. The smoke puff at the barrel comes
 so both go together. A null effect pointer is safe; the engine simply spawns nothing.
 
 The gun is placed relative to the camera, and `iw5sp.exe+0x6FD70` offsets it along the view's own
-right, forward and up axes (the same axes `cg_gun_x`, `cg_gun_y` and `cg_gun_z` drive). The runtime
-adds its own offsets after the engine has built the position, so the gun moves while the camera and
-the world stay put. X runs along the forward axis and pulls the gun in; past roughly a metre the root
-passes the eye and the model swings out to the side, which is the wide, low pose the slider exists
-for. Z slides the gun through the depth the lateral axis gives, positive moving it right and out, Y
-moves it up. The ranges are -1.5..3 for X and -3..3 for Y and Z. The offsets are applied on every
-frame, aiming included, and nothing is written while all three are zero.
+axes. The runtime adds its own offsets after the engine has built the position, so the gun moves while
+the camera and the world stay put. X runs along the depth axis: negative pulls the gun in and makes it
+larger, positive pushes it out and makes it smaller. Past about a metre of pull-in the root passes the
+eye and the model swings out to the side, which is the wide, low pose the slider exists for. Z slides
+the gun left and right, positive moving it right, Y moves it up. The ranges are -1.5..3 for X and
+-3..3 for Y and Z. The offsets are applied on every frame, aiming included, and nothing is written
+while all three are zero.
 
 Hipfire spread comes from the weapon definition, not from a dvar. Each weapon stores a resting cone per
 stance (`hipSpreadStandMin`, `hipSpreadDuckedMin`, `hipSpreadProneMin` and their max counterparts) and a

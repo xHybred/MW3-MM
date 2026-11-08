@@ -20,13 +20,15 @@ namespace
     constexpr unsigned char kPrologue[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x6C, 0x24, 0x10};
 
     constexpr size_t kOriginVector = 0x10;
-    // client+0x26A88/0x26A94/0x26AA0 are the view's right, forward and up
-    // axes. X moves along the forward one: pulling the root back past the eye
-    // swings the model out to the side, which is the pose X exists for. Z
-    // slides along the right axis and Y along the up axis; both are negated so
-    // a positive slider moves the weapon right and up respectively.
-    constexpr size_t kLeftAxis = 0x26A88;
-    constexpr size_t kForwardAxis = 0x26A94;
+    // client+0x26A88 is the axis the gun slides along in and out, and
+    // client+0x26A94 is the lateral one. The names came from the other way
+    // round and it showed in game: the depth slider moved the gun sideways.
+    // 0x26A88 points away into the world (it logged as -0.983, 0.142, 0.115
+    // with the camera facing west), so a positive X pushes the gun out and
+    // makes it smaller. Z is negated so a positive slider moves it right,
+    // and Y so it moves up.
+    constexpr size_t kForwardAxis = 0x26A88;
+    constexpr size_t kLeftAxis = 0x26A94;
     constexpr size_t kUpAxis = 0x26AA0;
 
     constexpr float kMaxOffset = 3.0f;
