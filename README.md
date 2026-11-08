@@ -263,9 +263,14 @@ Output: `out\MW3Mod.dll` and `out\manager\`. The runtime alone is `.\build.ps1`.
   is expected.
 - Multiplayer is not supported or tested. Do not use anything like this with Plutonium -
   its anti-cheat treats injected DLLs as cheating.
-- The manager can also install DXVK for a Vulkan renderer, either by downloading the latest
-  release from dxvk's GitHub or from a `d3d9.dll` you already have. The proxy sits on
-  `X3DAudio1_7.dll`, so the two do not collide. DXVK is not bundled with the mod.
+- The manager can also install DXVK for a Vulkan renderer, or dgVoodoo 2 for Direct3D 11,
+  either by downloading the latest release from GitHub or from a `d3d9.dll` you already
+  have. Both occupy `d3d9.dll`, so only one can be installed at a time; the proxy sits on
+  `X3DAudio1_7.dll`, so the runtime does not collide with them. Neither is bundled.
+- dgVoodoo 2 is a work in progress here. It renders the menus and the level, but with it
+  installed this build of the game never finishes loading a mission: the loading card stays
+  on screen and the level's dvars never register. The same happens with the mod removed, so
+  it is dgVoodoo rather than the runtime. Treat the Direct3D 11 option as an experiment.
 - `tools\` holds the throwaway scripts used while reversing: `set_fov.py` writes the dvars
   in a running game from outside, `inspect.py` dumps candidate dvar structs, and
   `patch_weapon_fov.py` served as the proof that overriding the weapon ADS FOV is enough

@@ -19,7 +19,7 @@ public partial class MainWindow : Window
     private ModConfig _config = new();
     private string? _gameDir;
     private bool _loading = true;
-    private bool _dxvkBusy;
+    private bool _rendererBusy;
     private long _statusHoldUntil;
 
     private readonly DispatcherTimer _statusTimer = new() { Interval = TimeSpan.FromSeconds(1) };
@@ -219,6 +219,7 @@ public partial class MainWindow : Window
 
         RefreshRuntimeRow();
         RefreshDxvkRow();
+        RefreshD3d11Row();
         UpdateFovUi();
     }
 
@@ -260,13 +261,28 @@ public partial class MainWindow : Window
         string? version = RuntimeInstaller.DxvkVersion(_gameDir);
 
         DxvkButton.Content = installed ? "Remove" : "Install";
-        DxvkButton.IsEnabled = _gameDir is not null && !_dxvkBusy;
+        DxvkButton.IsEnabled = _gameDir is not null && !_rendererBusy;
         DxvkFileButton.Visibility = installed ? Visibility.Collapsed : Visibility.Visible;
-        DxvkFileButton.IsEnabled = _gameDir is not null && !_dxvkBusy;
+        DxvkFileButton.IsEnabled = _gameDir is not null && !_rendererBusy;
 
         DxvkDetail.Text = installed
             ? version is null ? "Installed as d3d9.dll." : $"DXVK {version} installed as d3d9.dll."
             : "Optional. Downloads the latest release from GitHub and renders through Vulkan.";
+    }
+
+    private void RefreshD3d11Row()
+    {
+        bool installed = RuntimeInstaller.D3d11Installed(_gameDir);
+        string? version = RuntimeInstaller.D3d11Version(_gameDir);
+
+        D3d11Button.Content = installed ? "Remove" : "Install";
+        D3d11Button.IsEnabled = _gameDir is not null && !_rendererBusy;
+        D3d11FileButton.Visibility = installed ? Visibility.Collapsed : Visibility.Visible;
+        D3d11FileButton.IsEnabled = _gameDir is not null && !_rendererBusy;
+
+        D3d11Detail.Text = installed
+            ? version is null ? "dgVoodoo installed as d3d9.dll." : $"dgVoodoo {version} installed as d3d9.dll."
+            : "Optional. Hands the game's Direct3D 9 calls to Direct3D 11 through dgVoodoo 2.";
     }
 
     private void UpdateFovUi()
@@ -413,7 +429,7 @@ public partial class MainWindow : Window
         GameStateText.Text = running ? "Game running" : "Game not running";
 
         // A download or a just-applied preset owns the status line.
-        if (!_dxvkBusy && Environment.TickCount64 >= _statusHoldUntil)
+        if (!_rendererBusy && Environment.TickCount64 >= _statusHoldUntil)
         {
             string? line = LastLogLine();
             if (running && line is not null)
@@ -702,7 +718,7 @@ public partial class MainWindow : Window
 
     private async void Dxvk_Click(object sender, RoutedEventArgs e)
     {
-        if (_gameDir is null || _dxvkBusy) return;
+        if (_gameDir is null || _rendererBusy) return;
         if (GuardGameRunning()) return;
 
         if (RuntimeInstaller.DxvkInstalled(_gameDir))
@@ -721,7 +737,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        _dxvkBusy = true;
+        _rendererBusy = true;
         RefreshDxvkRow();
 
         string work = Path.Combine(Path.GetTempPath(), "MW3Mod");
@@ -751,14 +767,14 @@ public partial class MainWindow : Window
         }
         finally
         {
-            _dxvkBusy = false;
+            _rendererBusy = false;
             Refresh();
         }
     }
 
     private void DxvkFile_Click(object sender, RoutedEventArgs e)
     {
-        if (_gameDir is null || _dxvkBusy) return;
+        if (_gameDir is null || _rendererBusy) return;
         if (GuardGameRunning()) return;
 
         var dialog = new OpenFileDialog
@@ -777,6 +793,95 @@ public partial class MainWindow : Window
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
             Fail("Could not install DXVK", ex);
+        }
+
+        Refresh();
+    }
+
+
+    private async void D3d11_Click(object sender, RoutedEventArgs e)
+    {
+        if (_gameDir is null || _rendererBusy) return;
+        if (GuardGameRunning()) return;
+
+        if (RuntimeInstaller.D3d11Installed(_gameDir))
+        {
+            try
+            {
+                RuntimeInstaller.RemoveD3d11(_gameDir);
+                StatusText.Text = "Direct3D 11 wrapper removed. The game is back on Direct3D 9.";
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Fail("Could not change Direct3D 11", ex);
+            }
+
+            Refresh();
+            return;
+        }
+
+        _rendererBusy = true;
+        RefreshD3d11Row();
+
+        string work = Path.Combine(Path.GetTempPath(), "MW3Mod");
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+
+            StatusText.Text = "Looking up the latest dgVoodoo release...";
+            var release = await DgVoodooDownloader.FindLatestAsync(http, CancellationToken.None);
+
+            string folder = Path.Combine(work, "dgvoodoo-" + release.Tag);
+            var progress = new Progress<double>(fraction =>
+                StatusText.Text = $"Downloading dgVoodoo {release.Tag}... {(int)(fraction * 100)}%");
+
+            var payload = await DgVoodooDownloader.DownloadAsync(
+                http, release, folder, progress, CancellationToken.None);
+
+            RuntimeInstaller.InstallD3d11(_gameDir, payload.Dll, payload.Conf);
+            StatusText.Text = $"dgVoodoo {release.Tag} installed. Start the game to render through Direct3D 11.";
+
+            try { Directory.Delete(folder, recursive: true); } catch (IOException) { }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or IOException
+                                       or UnauthorizedAccessException or JsonException or TaskCanceledException)
+        {
+            Fail("Could not install Direct3D 11", ex);
+        }
+        finally
+        {
+            _rendererBusy = false;
+            Refresh();
+        }
+    }
+
+    private void D3d11File_Click(object sender, RoutedEventArgs e)
+    {
+        if (_gameDir is null || _rendererBusy) return;
+        if (GuardGameRunning()) return;
+
+        var dialog = new OpenFileDialog
+        {
+            Title = "Pick dgVoodoo's x64 D3D9.dll",
+            Filter = "D3D9.dll|D3D9.dll|DLL files|*.dll",
+            CheckFileExists = true,
+        };
+        if (dialog.ShowDialog(this) != true) return;
+
+        try
+        {
+            // When the file comes out of the zip, the conf sits at its root.
+            string? folder = Path.GetDirectoryName(dialog.FileName);
+            string? conf = folder is null
+                ? null
+                : Path.Combine(Path.GetDirectoryName(folder) ?? folder, RuntimeInstaller.DgVoodooConfName);
+
+            RuntimeInstaller.InstallD3d11(_gameDir, dialog.FileName, conf);
+            StatusText.Text = "dgVoodoo installed as d3d9.dll.";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            Fail("Could not install Direct3D 11", ex);
         }
 
         Refresh();

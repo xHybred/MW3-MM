@@ -1,3 +1,4 @@
+﻿using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -9,7 +10,13 @@ public static class RuntimeInstaller
     // The game ships without this file, loads it from its own folder before the
     // system copy, and our build forwards the two X3DAudio exports onward.
     public const string ProxyName = "X3DAudio1_7.dll";
-    public const string DxvkName = "d3d9.dll";
+
+    // Only one wrapper can own this name, so DXVK, dgVoodoo and ReShade all
+    // compete for the same file.
+    public const string D3d9Name = "d3d9.dll";
+    public const string DgVoodooConfName = "dgVoodoo.conf";
+
+    public enum D3d9Owner { Nobody, Dxvk, DgVoodoo, ReShade, SomethingElse }
 
     public static string BundlePath => Path.Combine(AppContext.BaseDirectory, "MW3Mod.dll");
 
@@ -45,34 +52,147 @@ public static class RuntimeInstaller
         return true;
     }
 
+    public static D3d9Owner Owner(string? gameDir)
+    {
+        if (gameDir is null) return D3d9Owner.Nobody;
+
+        string path = Path.Combine(gameDir, D3d9Name);
+        if (!File.Exists(path)) return D3d9Owner.Nobody;
+
+        var probe = Probe(path);
+        if (probe.Dxvk) return D3d9Owner.Dxvk;
+        if (probe.DgVoodoo) return D3d9Owner.DgVoodoo;
+        if (probe.ReShade) return D3d9Owner.ReShade;
+        return D3d9Owner.SomethingElse;
+    }
+
+    public static string OwnerName(D3d9Owner owner) => owner switch
+    {
+        D3d9Owner.Dxvk => "DXVK",
+        D3d9Owner.DgVoodoo => "Direct3D 11",
+        D3d9Owner.ReShade => "ReShade",
+        D3d9Owner.SomethingElse => "another program",
+        _ => "nothing",
+    };
+
     public static bool DxvkInstalled(string? gameDir) =>
-        gameDir is not null && File.Exists(Path.Combine(gameDir, DxvkName)) &&
-        Probe(Path.Combine(gameDir, DxvkName)).Ours;
+        Owner(gameDir) == D3d9Owner.Dxvk;
 
     public static string? DxvkVersion(string? gameDir) =>
-        gameDir is null ? null : Probe(Path.Combine(gameDir, DxvkName)).Version;
+        gameDir is null ? null : Probe(Path.Combine(gameDir, D3d9Name)).Version;
 
     public static void InstallDxvk(string gameDir, string sourceDll)
     {
-        if (!Probe(sourceDll).Ours)
+        if (!Probe(sourceDll).Dxvk)
             throw new InvalidOperationException("That file does not look like a DXVK d3d9.dll.");
 
-        File.Copy(sourceDll, Path.Combine(gameDir, DxvkName), overwrite: true);
+        var taken = Owner(gameDir);
+        if (taken != D3d9Owner.Nobody && taken != D3d9Owner.Dxvk)
+            throw new InvalidOperationException(
+                $"d3d9.dll is taken by {OwnerName(taken)}. Remove it first.");
+
+        File.Copy(sourceDll, Path.Combine(gameDir, D3d9Name), overwrite: true);
         Probed.Clear();
     }
 
     public static bool RemoveDxvk(string gameDir)
     {
-        string path = Path.Combine(gameDir, DxvkName);
-        if (!File.Exists(path) || !Probe(path).Ours) return false;
+        string path = Path.Combine(gameDir, D3d9Name);
+        if (!File.Exists(path) || !Probe(path).Dxvk) return false;
         File.Delete(path);
         Probed.Clear();
         return true;
     }
 
-    private sealed record DllProbe(bool Ours, string? Version);
+    public static bool D3d11Installed(string? gameDir) =>
+        Owner(gameDir) == D3d9Owner.DgVoodoo;
 
-    // Answers cost a full read of a 7 MB DLL, so keep each answer until the file changes.
+    public static string? D3d11Version(string? gameDir)
+    {
+        if (gameDir is null) return null;
+
+        string path = Path.Combine(gameDir, D3d9Name);
+        if (!File.Exists(path) || !Probe(path).DgVoodoo) return null;
+
+        try
+        {
+            // Unlike DXVK, dgVoodoo fills in its Windows version resource for
+            // real, and the file description names the release.
+            string? text = FileVersionInfo.GetVersionInfo(path).FileDescription;
+            var match = text is null ? null : Regex.Match(text, @"dgVoodoo (\d+\.\d+\.\d+)");
+            return match is { Success: true } ? match.Groups[1].Value : null;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    public static void InstallD3d11(string gameDir, string sourceDll, string? sourceConf)
+    {
+        // The x86 build sits in the folder, is refused by the loader and the game
+        // quietly goes back to its own Direct3D 9, so it is worth refusing here.
+        if (!Is64Bit(sourceDll))
+            throw new InvalidOperationException(
+                "That D3D9.dll is the 32-bit build. A 64-bit game only loads the x64 one.");
+
+        var taken = Owner(gameDir);
+        if (taken != D3d9Owner.Nobody && taken != D3d9Owner.DgVoodoo)
+            throw new InvalidOperationException(
+                $"d3d9.dll is taken by {OwnerName(taken)}. Remove it first.");
+
+        File.Copy(sourceDll, Path.Combine(gameDir, D3d9Name), overwrite: true);
+
+        if (sourceConf is not null && File.Exists(sourceConf))
+            File.Copy(sourceConf, Path.Combine(gameDir, DgVoodooConfName), overwrite: true);
+
+        Probed.Clear();
+    }
+
+    public static bool RemoveD3d11(string gameDir)
+    {
+        string path = Path.Combine(gameDir, D3d9Name);
+        if (!File.Exists(path) || !Probe(path).DgVoodoo) return false;
+
+        File.Delete(path);
+
+        string conf = Path.Combine(gameDir, DgVoodooConfName);
+        if (File.Exists(conf)) File.Delete(conf);
+
+        Probed.Clear();
+        return true;
+    }
+
+    public static bool Is64Bit(string path)
+    {
+        try
+        {
+            using var stream = File.OpenRead(path);
+            using var reader = new BinaryReader(stream);
+
+            stream.Seek(0x3C, SeekOrigin.Begin);
+            int peOffset = reader.ReadInt32();
+
+            stream.Seek(peOffset + 4, SeekOrigin.Begin);
+            return reader.ReadUInt16() == 0x8664;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    private sealed record DllProbe(bool Dxvk, bool DgVoodoo, bool ReShade, string? Version);
+
+    // Answers cost a full read of the file, so keep each answer until it changes.
     private static readonly Dictionary<string, (long Length, DateTime Written, DllProbe Probe)> Probed = [];
 
     private static DllProbe Probe(string path)
@@ -87,27 +207,39 @@ public static class RuntimeInstaller
             }
 
             byte[] bytes = File.ReadAllBytes(path);
-            bool ours = bytes.AsSpan().IndexOf("DXVK"u8) >= 0;
-            var probe = new DllProbe(ours, ours ? FindVersion(bytes) : null);
+
+            bool dxvk = Mentions(bytes, "DXVK");
+            bool dgVoodoo = Mentions(bytes, "dgVoodoo");
+            bool reShade = Mentions(bytes, "ReShade");
+
+            var probe = new DllProbe(dxvk, dgVoodoo, reShade, dxvk ? FindVersion(bytes) : null);
             Probed[path] = (file.Length, file.LastWriteTimeUtc, probe);
             return probe;
         }
         catch (FileNotFoundException)
         {
-            return new DllProbe(false, null);
+            return new DllProbe(false, false, false, null);
         }
         catch (DirectoryNotFoundException)
         {
-            return new DllProbe(false, null);
+            return new DllProbe(false, false, false, null);
         }
         catch (IOException)
         {
-            return new DllProbe(false, null);
+            return new DllProbe(false, false, false, null);
         }
         catch (UnauthorizedAccessException)
         {
-            return new DllProbe(false, null);
+            return new DllProbe(false, false, false, null);
         }
+    }
+
+    // DXVK and ReShade name themselves in plain ASCII, while dgVoodoo only does so
+    // inside its UTF-16 version resource, so both encodings are searched.
+    private static bool Mentions(byte[] bytes, string text)
+    {
+        return bytes.AsSpan().IndexOf(Encoding.ASCII.GetBytes(text)) >= 0 ||
+               bytes.AsSpan().IndexOf(Encoding.Unicode.GetBytes(text)) >= 0;
     }
 
     // DXVK ships a fake Windows version resource, but stamps the real number into
