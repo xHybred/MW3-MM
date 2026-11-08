@@ -32,6 +32,7 @@ public sealed class ModConfig
     public float SwayStrength { get; set; } = 1.0f;
     public bool FlashEnabled { get; set; } = true;
     public bool ViewmodelEnabled { get; set; } = true;
+    public float ViewmodelX { get; set; }
     public float ViewmodelZ { get; set; }
     public float ViewmodelY { get; set; }
     public bool LogEffectiveFov { get; set; }
@@ -145,9 +146,13 @@ public sealed class ModConfig
                 switch (key.ToLowerInvariant())
                 {
                     case "enabled": config.ViewmodelEnabled = ParseBool(value, config.ViewmodelEnabled); break;
-                    case "zoffset":
+                    case "xoffset":
                         if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float x))
-                            config.ViewmodelZ = Math.Clamp(x, -3f, 3f);
+                            config.ViewmodelX = Math.Clamp(x, -1.5f, 3f);
+                        break;
+                    case "zoffset":
+                        if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float z))
+                            config.ViewmodelZ = Math.Clamp(z, -3f, 3f);
                         break;
                     case "yoffset":
                         if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float y))
@@ -206,6 +211,7 @@ public sealed class ModConfig
             "",
             "[Viewmodel]",
             $"Enabled={(ViewmodelEnabled ? 1 : 0)}",
+            "XOffset=" + ViewmodelX.ToString("0.###", CultureInfo.InvariantCulture),
             "ZOffset=" + ViewmodelZ.ToString("0.###", CultureInfo.InvariantCulture),
             "YOffset=" + ViewmodelY.ToString("0.###", CultureInfo.InvariantCulture),
             "",

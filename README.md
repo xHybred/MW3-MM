@@ -54,6 +54,7 @@ Enabled=1
 
 [Viewmodel]
 Enabled=1
+XOffset=0
 ZOffset=0
 YOffset=0
 ```
@@ -82,8 +83,9 @@ apply without a restart.
 | `[Sway] Enabled` | 1 scales how far the gun drifts while aiming and moving, 0 leaves it untouched |
 | `[Sway] Strength` | 0..1, how far the gun drifts. 1 = stock, 0 = no drift |
 | `[Flash] Enabled` | 1 leaves the muzzle flash and its smoke puff, 0 removes both |
-| `[Viewmodel] Enabled` | 1 applies the two offsets below, 0 leaves the gun where the game puts it |
-| `[Viewmodel] ZOffset` | -3..3, slides the gun left (negative) or right (positive) |
+| `[Viewmodel] Enabled` | 1 applies the three offsets below, 0 leaves the gun where the game puts it |
+| `[Viewmodel] XOffset` | -1.5..3, pulls the gun in (negative) for the oversized side pose, pushes it out (positive) |
+| `[Viewmodel] ZOffset` | -3..3, moves the gun in (negative) and out (positive) as it slides |
 | `[Viewmodel] YOffset` | -3..3, slides the gun down (negative) or up (positive) |
 | `[Debug] LogEffectiveFov` | log each weapon's aim FOV when it changes |
 | `[Debug] DvarScan` | log every step of the dvar lookup |
@@ -160,11 +162,12 @@ so both go together. A null effect pointer is safe; the engine simply spawns not
 
 The gun is placed relative to the camera, and `iw5sp.exe+0x6FD70` offsets it along the view's own
 right, forward and up axes (the same axes `cg_gun_x`, `cg_gun_y` and `cg_gun_z` drive). The runtime
-adds its own offset along the right and up axes after the engine has built the position, so the two
-sliders slide the gun sideways and vertically while the camera and the world stay put. Positive Z
-moves the gun right and positive Y moves it up; the range is 3 game units either way, which is
-several times the width of the model. The offsets are applied on every frame, aiming included, and
-nothing is written while both are zero.
+adds its own offsets after the engine has built the position, so the gun moves while the camera and
+the world stay put. X runs along the forward axis and pulls the gun in; past roughly a metre the root
+passes the eye and the model swings out to the side, which is the wide, low pose the slider exists
+for. Z slides the gun through the depth the lateral axis gives, positive moving it right and out, Y
+moves it up. The ranges are -1.5..3 for X and -3..3 for Y and Z. The offsets are applied on every
+frame, aiming included, and nothing is written while all three are zero.
 
 The viewmodel cannot have its own field of view. A probe on the D3D9 device showed the game never
 calls `SetTransform(D3DTS_PROJECTION)` and draws the first-person model with the same projection as

@@ -15,27 +15,30 @@ namespace
 {
     // FUN_14006FD70 builds the first-person model's origin for the frame. The
     // engine adds cg_gun_x/y/z along the view's own axes here, so the same
-    // place can shift the weapon sideways and vertically by a fixed amount.
+    // place can shift the weapon by a fixed amount.
     constexpr size_t kOriginOffset = 0x6FD70;
     constexpr unsigned char kPrologue[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x6C, 0x24, 0x10};
 
     constexpr size_t kOriginVector = 0x10;
     // client+0x26A88/0x26A94/0x26AA0 are the view's right, forward and up
-    // axes. The first one points left (its x component is negative while
-    // looking down -Y), so it is negated to make a positive slider move the
-    // weapon to the right; the third points down in world space, so it is
-    // negated too and a positive Y moves the weapon up.
+    // axes. X moves along the forward one: pulling the root back past the eye
+    // swings the model out to the side, which is the pose X exists for. Z
+    // slides along the right axis and Y along the up axis; both are negated so
+    // a positive slider moves the weapon right and up respectively.
     constexpr size_t kLeftAxis = 0x26A88;
+    constexpr size_t kForwardAxis = 0x26A94;
     constexpr size_t kUpAxis = 0x26AA0;
 
     constexpr float kMaxOffset = 3.0f;
+    constexpr float kMaxPullIn = 1.5f;
 
     using OriginFn = void (*)(void*, void*, void*, void*);
 
     OriginFn g_original = nullptr;
     std::atomic<bool> g_enabled{true};
-    std::atomic<float> g_z{0.0f};
+    std::atomic<float> g_x{0.0f};
     std::atomic<float> g_y{0.0f};
+    std::atomic<float> g_z{0.0f};
     std::atomic<bool> g_debug{false};
     std::atomic<ULONGLONG> g_nextLog{0};
 
@@ -46,18 +49,20 @@ namespace
         if (!client || !out || !g_enabled.load(std::memory_order_relaxed))
             return;
 
-        const float z = std::clamp(g_z.load(std::memory_order_relaxed), -kMaxOffset, kMaxOffset);
+        const float x = std::clamp(g_x.load(std::memory_order_relaxed), -kMaxPullIn, kMaxOffset);
         const float y = std::clamp(g_y.load(std::memory_order_relaxed), -kMaxOffset, kMaxOffset);
+        const float z = std::clamp(g_z.load(std::memory_order_relaxed), -kMaxOffset, kMaxOffset);
 
-        if (std::fabs(z) > 0.0005f || std::fabs(y) > 0.0005f)
+        if (std::fabs(x) > 0.0005f || std::fabs(y) > 0.0005f || std::fabs(z) > 0.0005f)
         {
             const auto* bytes = static_cast<const unsigned char*>(client);
             auto* origin = reinterpret_cast<float*>(static_cast<unsigned char*>(out) + kOriginVector);
             const auto* left = reinterpret_cast<const float*>(bytes + kLeftAxis);
+            const auto* forward = reinterpret_cast<const float*>(bytes + kForwardAxis);
             const auto* up = reinterpret_cast<const float*>(bytes + kUpAxis);
 
             for (size_t i = 0; i < 3; ++i)
-                origin[i] += -z * left[i] - y * up[i];
+                origin[i] += x * forward[i] - z * left[i] - y * up[i];
         }
 
         if (g_debug.load(std::memory_order_relaxed))
@@ -66,7 +71,7 @@ namespace
             if (now >= g_nextLog.load(std::memory_order_relaxed))
             {
                 g_nextLog.store(now + 500, std::memory_order_relaxed);
-                LogF(L"viewmodel: z %.2f y %.2f", z, y);
+                LogF(L"viewmodel: x %.2f y %.2f z %.2f", x, y, z);
             }
         }
     }
@@ -103,7 +108,8 @@ bool viewmodel::Install()
 void viewmodel::Update(const ModSettings& settings)
 {
     g_enabled.store(settings.viewmodelEnabled, std::memory_order_relaxed);
-    g_z.store(settings.viewmodelZ, std::memory_order_relaxed);
+    g_x.store(settings.viewmodelX, std::memory_order_relaxed);
     g_y.store(settings.viewmodelY, std::memory_order_relaxed);
+    g_z.store(settings.viewmodelZ, std::memory_order_relaxed);
     g_debug.store(settings.viewmodelDebug, std::memory_order_relaxed);
 }
