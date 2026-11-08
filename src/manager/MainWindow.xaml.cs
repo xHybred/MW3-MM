@@ -20,6 +20,7 @@ public partial class MainWindow : Window
     private string? _gameDir;
     private bool _loading = true;
     private bool _dxvkBusy;
+    private long _statusHoldUntil;
 
     private readonly DispatcherTimer _statusTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromMilliseconds(300) };
@@ -51,10 +52,30 @@ public partial class MainWindow : Window
         _config.BlurEnabled = true;
 
         _loading = true;
+        ApplyConfigToControls();
+        _loading = false;
+
+        if (!File.Exists(ModConfig.SettingsPath))
+        {
+            try { _config.Save(); } catch (IOException) { /* the panel still shows defaults */ }
+        }
+
+        BuildPresetBar();
+        Refresh();
+        ShowPage(0);
+        _statusTimer.Tick += (_, _) => RefreshStatus();
+        _statusTimer.Start();
+        RefreshStatus();
+    }
+
+    /// <summary>Pushes the loaded configuration into every control at once.</summary>
+    private void ApplyConfigToControls()
+    {
         FovSlider.Value = Math.Clamp(_config.Fov, 60f, ModConfig.MaxFov);
         AimSlider.Value = Math.Clamp(_config.AimZoom * 100f, 100f, ModConfig.MaxZoom * 100f);
         EnabledSwitch.IsChecked = _config.Enabled;
         AffectedSwitch.IsChecked = _config.Affected;
+        AimSwitch.IsChecked = _config.AimEnabled;
         FlatSwitch.IsChecked = _config.AimFlat;
         FlinchSlider.Value = Math.Clamp(_config.FlinchStrength * 100f, 0f, 100f);
         BlurSlider.Value = Math.Clamp(_config.BlurStrength * 100f, 0f, 100f);
@@ -72,22 +93,13 @@ public partial class MainWindow : Window
         CrosshairShowSwitch.IsChecked = _config.CrosshairShow;
         CrosshairDynamicSwitch.IsChecked = _config.CrosshairDynamic;
         CrosshairSwitch.IsChecked = _config.CrosshairEnabled;
-        _loading = false;
-
-        if (!File.Exists(ModConfig.SettingsPath))
-        {
-            try { _config.Save(); } catch (IOException) { /* the panel still shows defaults */ }
-        }
-
-        Refresh();
-        ShowPage(0);
-        _statusTimer.Tick += (_, _) => RefreshStatus();
-        _statusTimer.Start();
-        RefreshStatus();
     }
 
     private readonly Button[] _navButtons = new Button[6];
     private readonly FrameworkElement[] _pages = new FrameworkElement[6];
+
+    private readonly List<(Preset Preset, Button Button)> _presetButtons = new();
+    private TextBlock _customLabel = null!;
     private int _page;
 
     private void ShowPage(int index)
@@ -119,6 +131,77 @@ public partial class MainWindow : Window
     {
         ShowPage(sender == NavWeapon ? 1 : sender == NavViewmodel ? 2 : sender == NavCrosshair ? 3
             : sender == NavScreen ? 4 : sender == NavSetup ? 5 : 0);
+    }
+
+    /// <summary>
+    /// Builds one button per preset in <see cref="Presets.All"/>, so adding a
+    /// preset is one entry in that list and nothing here.
+    /// </summary>
+    private void BuildPresetBar()
+    {
+        var nav = (Style)FindResource("NavButton");
+        PresetBar.Children.Clear();
+        _presetButtons.Clear();
+
+        foreach (Preset preset in Presets.All)
+        {
+            var button = new Button
+            {
+                Content = preset.Name,
+                Style = nav,
+                Margin = new Thickness(4, 0, 0, 0),
+                ToolTip = preset.Description,
+            };
+            button.Click += (_, _) => ApplyPreset(preset);
+            PresetBar.Children.Add(button);
+            _presetButtons.Add((preset, button));
+        }
+
+        _customLabel = new TextBlock
+        {
+            Text = "Custom",
+            Style = (Style)FindResource("EndLabel"),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(10, 0, 6, 0),
+            Visibility = Visibility.Collapsed,
+        };
+        PresetBar.Children.Add(_customLabel);
+        RefreshPresetBar();
+    }
+
+    private void ApplyPreset(Preset preset)
+    {
+        _config.CopyFeatureValuesFrom(preset.Values);
+
+        _loading = true;
+        ApplyConfigToControls();
+        _loading = false;
+
+        _saveTimer.Stop();
+        SaveConfig();
+        StatusText.Text = preset.Name + " applied. A running game picks this up within a second.";
+        _statusHoldUntil = Environment.TickCount64 + 4000;
+        UpdateFovUi();
+        RefreshPresetBar();
+    }
+
+    /// <summary>Highlights the preset the live values still match, if any.</summary>
+    private void RefreshPresetBar()
+    {
+        Preset? active = null;
+        foreach ((Preset preset, Button button) in _presetButtons)
+        {
+            if (active is null && _config.MatchesFeatureValues(preset.Values)) active = preset;
+        }
+
+        foreach ((Preset preset, Button button) in _presetButtons)
+        {
+            bool on = ReferenceEquals(preset, active);
+            button.Background = (Brush)FindResource(on ? "Accent" : "CardBg");
+            button.Foreground = (Brush)FindResource(on ? "Bg" : "Muted");
+        }
+
+        _customLabel.Visibility = active is null ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void Refresh()
@@ -188,7 +271,11 @@ public partial class MainWindow : Window
 
         float fov = (float)Math.Round(FovSlider.Value);
         float zoom = _config.AimZoom;
-        float ads = _config.Affected ? fov / zoom : PivotFov / zoom;
+        // With the aiming hook off the engine keeps its own 40 degree weapon FOV,
+        // so ADS tracks cg_fovScale only.
+        float ads = !_config.AimEnabled
+            ? (_config.Affected ? fov / 1.625f : 40f)
+            : (_config.Affected ? fov / zoom : PivotFov / zoom);
 
         FovValueText.Text = fov.ToString("0") + "\u00B0";
         HipText.Text = fov.ToString("0.0") + "\u00B0";
@@ -202,9 +289,15 @@ public partial class MainWindow : Window
             ? "Aiming widens with your FOV, like newer Call of Duty titles."
             : "Aiming keeps the default 65\u00B0 base, so only the hipfire view changes.";
 
-        AimHint.Text = _config.AimFlat
-            ? "Every weapon zooms the same, scopes included."
-            : "1x sights share one zoom level, scopes keep more of their magnification.";
+        AimHint.Text = !_config.AimEnabled
+            ? "Stock. Each weapon keeps the zoom the game gives it."
+            : _config.AimFlat
+                ? "Every weapon zooms the same, scopes included."
+                : "1x sights share one zoom level, scopes keep more of their magnification.";
+        AimSlider.IsEnabled = _config.AimEnabled;
+        AimSlider.Opacity = _config.AimEnabled ? 1.0 : 0.45;
+        FlatSwitch.IsEnabled = _config.AimEnabled;
+        FlatSwitch.Opacity = _config.AimEnabled ? 1.0 : 0.45;
 
         FlinchPanel.IsEnabled = runtime;
         FlinchPanel.Opacity = runtime ? 1.0 : 0.45;
@@ -293,6 +386,7 @@ public partial class MainWindow : Window
         };
 
         SetSwitchLabel(EnabledSwitch, _config.Enabled);
+        SetSwitchLabel(AimSwitch, _config.AimEnabled);
         SetSwitchLabel(FlashSwitch, !_config.FlashEnabled);
         SetSwitchLabel(ViewmodelSwitch, _config.ViewmodelEnabled);
         SetSwitchLabel(CrosshairSwitch, _config.CrosshairEnabled);
@@ -308,8 +402,8 @@ public partial class MainWindow : Window
         GameDot.Fill = Brush(running ? "Accent" : "Dim");
         GameStateText.Text = running ? "Game running" : "Game not running";
 
-        // A download owns the status line until it finishes.
-        if (!_dxvkBusy)
+        // A download or a just-applied preset owns the status line.
+        if (!_dxvkBusy && Environment.TickCount64 >= _statusHoldUntil)
         {
             string? line = LastLogLine();
             if (running && line is not null)
@@ -338,6 +432,14 @@ public partial class MainWindow : Window
         _config.Enabled = EnabledSwitch.IsChecked == true;
         _config.Affected = AffectedSwitch.IsChecked == true;
         _config.AimFlat = FlatSwitch.IsChecked == true;
+        UpdateFovUi();
+        SaveLater();
+    }
+
+    private void Aim_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        _config.AimEnabled = AimSwitch.IsChecked == true;
         UpdateFovUi();
         SaveLater();
     }
@@ -498,6 +600,7 @@ public partial class MainWindow : Window
         {
             _config.Save();
             StatusText.Text = "Saved. A running game picks this up within a second.";
+            RefreshPresetBar();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

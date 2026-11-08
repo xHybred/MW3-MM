@@ -17,6 +17,10 @@ does not), then press **Install** in the FOV runtime row and pick a FOV.
 The manager only writes files and settings; it does not need to stay running and does not
 need to launch the game. The game loads the mod on every start.
 
+Settings are grouped into tabs, and the buttons at the right of the tab bar apply a whole
+configuration at once: **Default** puts every value back to stock, **Recommended** is a
+tuned starting point. Change anything afterwards and the app shows `Custom` instead.
+
 Manual install, if you prefer:
 
 1. Copy `out\MW3Mod.dll` into the game folder as `X3DAudio1_7.dll`.

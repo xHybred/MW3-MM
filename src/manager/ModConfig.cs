@@ -50,6 +50,73 @@ public sealed class ModConfig
     public bool LogEffectiveFov { get; set; }
     public bool DvarScan { get; set; }
 
+    /// <summary>
+    /// Copies the values a preset owns. Debug switches are deliberately left
+    /// alone: they belong to whoever is chasing a problem, not to a preset.
+    /// </summary>
+    public void CopyFeatureValuesFrom(ModConfig other)
+    {
+        Enabled = other.Enabled;
+        Affected = other.Affected;
+        Fov = other.Fov;
+
+        AimEnabled = other.AimEnabled;
+        AimFlat = other.AimFlat;
+        AimZoom = other.AimZoom;
+
+        FlinchStrength = other.FlinchStrength;
+        BlurStrength = other.BlurStrength;
+        RecoilStrength = other.RecoilStrength;
+        SwayStrength = other.SwayStrength;
+        FlashEnabled = other.FlashEnabled;
+        SpreadAccuracy = other.SpreadAccuracy;
+        SpreadBloom = other.SpreadBloom;
+
+        ViewmodelEnabled = other.ViewmodelEnabled;
+        ViewmodelX = other.ViewmodelX;
+        ViewmodelZ = other.ViewmodelZ;
+        ViewmodelY = other.ViewmodelY;
+
+        CrosshairEnabled = other.CrosshairEnabled;
+        CrosshairSize = other.CrosshairSize;
+        CrosshairOpacity = other.CrosshairOpacity;
+        CrosshairDynamic = other.CrosshairDynamic;
+        CrosshairShow = other.CrosshairShow;
+        CrosshairStyle = other.CrosshairStyle;
+    }
+
+    /// <summary>True when every value a preset sets still matches this config.</summary>
+    public bool MatchesFeatureValues(ModConfig other)
+    {
+        const float eps = 0.0005f;
+
+        bool Same(float a, float b) => Math.Abs(a - b) <= eps;
+
+        return Enabled == other.Enabled &&
+               Affected == other.Affected &&
+               Same(Fov, other.Fov) &&
+               AimEnabled == other.AimEnabled &&
+               AimFlat == other.AimFlat &&
+               Same(AimZoom, other.AimZoom) &&
+               Same(FlinchStrength, other.FlinchStrength) &&
+               Same(BlurStrength, other.BlurStrength) &&
+               Same(RecoilStrength, other.RecoilStrength) &&
+               Same(SwayStrength, other.SwayStrength) &&
+               FlashEnabled == other.FlashEnabled &&
+               Same(SpreadAccuracy, other.SpreadAccuracy) &&
+               Same(SpreadBloom, other.SpreadBloom) &&
+               ViewmodelEnabled == other.ViewmodelEnabled &&
+               Same(ViewmodelX, other.ViewmodelX) &&
+               Same(ViewmodelZ, other.ViewmodelZ) &&
+               Same(ViewmodelY, other.ViewmodelY) &&
+               CrosshairEnabled == other.CrosshairEnabled &&
+               Same(CrosshairSize, other.CrosshairSize) &&
+               Same(CrosshairOpacity, other.CrosshairOpacity) &&
+               CrosshairDynamic == other.CrosshairDynamic &&
+               CrosshairShow == other.CrosshairShow &&
+               CrosshairStyle == other.CrosshairStyle;
+    }
+
     public static string DataDir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MW3Mod");
 
