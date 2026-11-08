@@ -28,16 +28,15 @@ namespace
     constexpr size_t kForwardAxis = 0x26A94;
     constexpr size_t kAimFraction = 0x338;
 
-    // Distance from the camera to the visible part of the gun, measured by
-    // matching cg_gun_z against the stock size at 110 degrees. Only used to
-    // turn a wanted size ratio into a distance, so an approximate value keeps
-    // the slider proportional.
-    constexpr float kGunDistance = 3.5f;
-    // axB points away from the camera, so a positive offset shrinks the gun and
-    // a negative one pulls it closer. Pulling it in past about a metre runs the
-    // model through the near plane, so the two sides are capped differently.
-    constexpr float kMaxPullIn = 1.5f;
-    constexpr float kMaxPushOut = 3.0f;
+    // The model root sits at the camera, so the visible geometry is only a few
+    // tenths of a metre away: pulling it in by a metre puts it behind the eye
+    // and the projection flips it across the screen. Everything here is small.
+    constexpr float kGunDistance = 0.25f;
+    // axB points away from the camera, so a negative offset pulls the gun in
+    // and a positive one pushes it out. Pulling in is capped tight because the
+    // model passes through the near plane; pushing out has more room.
+    constexpr float kMaxPullIn = 0.18f;
+    constexpr float kMaxPushOut = 0.50f;
     constexpr float kPi = 3.14159265358979f;
 
     using OriginFn = void (*)(void*, void*, void*, void*);

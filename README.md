@@ -160,11 +160,11 @@ The gun is placed relative to the camera, and `iw5sp.exe+0x6FD70` offsets it alo
 right, forward and up axes (the same axes `cg_gun_x`, `cg_gun_y` and `cg_gun_z` drive). The forward one
 changes its apparent size without touching the world: because the gun root sits at the camera and the
 model extends forward, moving it back makes it larger and moving it forward makes it smaller. The
-runtime adds `offset = -3.5 * (1 - 1/k)` with `k = (tan(fov/2) / tan(pivot/2))^(1 - influence)`, so at
+runtime adds `offset = -0.25 * (1 - 1/k)` with `k = (tan(fov/2) / tan(pivot/2))^(1 - influence)`, so at
 influence 1 the offset is zero and nothing is written; 0 cancels the shrink entirely; values above 1
 push the gun further than stock. The offset is faded out by the aim fraction so aiming is untouched,
-and clamped to 1.5 units towards the camera and 3 units away, because pulling the model in any further
-runs it through the near plane.
+and clamped to 0.18 units towards the camera and 0.5 away. The gun root sits at the camera, so the
+visible model is only a few tenths of a metre away and a larger pull-in would put it behind the eye.
 
 ## Build
 
