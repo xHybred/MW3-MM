@@ -34,7 +34,7 @@ namespace
 
     OriginFn g_original = nullptr;
     std::atomic<bool> g_enabled{true};
-    std::atomic<float> g_x{0.0f};
+    std::atomic<float> g_z{0.0f};
     std::atomic<float> g_y{0.0f};
     std::atomic<bool> g_debug{false};
     std::atomic<ULONGLONG> g_nextLog{0};
@@ -46,10 +46,10 @@ namespace
         if (!client || !out || !g_enabled.load(std::memory_order_relaxed))
             return;
 
-        const float x = std::clamp(g_x.load(std::memory_order_relaxed), -kMaxOffset, kMaxOffset);
+        const float z = std::clamp(g_z.load(std::memory_order_relaxed), -kMaxOffset, kMaxOffset);
         const float y = std::clamp(g_y.load(std::memory_order_relaxed), -kMaxOffset, kMaxOffset);
 
-        if (std::fabs(x) > 0.0005f || std::fabs(y) > 0.0005f)
+        if (std::fabs(z) > 0.0005f || std::fabs(y) > 0.0005f)
         {
             const auto* bytes = static_cast<const unsigned char*>(client);
             auto* origin = reinterpret_cast<float*>(static_cast<unsigned char*>(out) + kOriginVector);
@@ -57,7 +57,7 @@ namespace
             const auto* up = reinterpret_cast<const float*>(bytes + kUpAxis);
 
             for (size_t i = 0; i < 3; ++i)
-                origin[i] += -x * left[i] - y * up[i];
+                origin[i] += -z * left[i] - y * up[i];
         }
 
         if (g_debug.load(std::memory_order_relaxed))
@@ -66,7 +66,7 @@ namespace
             if (now >= g_nextLog.load(std::memory_order_relaxed))
             {
                 g_nextLog.store(now + 500, std::memory_order_relaxed);
-                LogF(L"viewmodel: x %.2f y %.2f", x, y);
+                LogF(L"viewmodel: z %.2f y %.2f", z, y);
             }
         }
     }
@@ -103,7 +103,7 @@ bool viewmodel::Install()
 void viewmodel::Update(const ModSettings& settings)
 {
     g_enabled.store(settings.viewmodelEnabled, std::memory_order_relaxed);
-    g_x.store(settings.viewmodelX, std::memory_order_relaxed);
+    g_z.store(settings.viewmodelZ, std::memory_order_relaxed);
     g_y.store(settings.viewmodelY, std::memory_order_relaxed);
     g_debug.store(settings.viewmodelDebug, std::memory_order_relaxed);
 }

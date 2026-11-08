@@ -51,7 +51,7 @@ public partial class MainWindow : Window
         SwaySlider.Value = Math.Clamp(_config.SwayStrength * 100f, 0f, 100f);
         SwaySwitch.IsChecked = _config.SwayEnabled;
         FlashSwitch.IsChecked = _config.FlashEnabled;
-        ViewmodelXSlider.Value = Math.Clamp(_config.ViewmodelX, -3f, 3f);
+        ViewmodelZSlider.Value = Math.Clamp(_config.ViewmodelZ, -3f, 3f);
         ViewmodelYSlider.Value = Math.Clamp(_config.ViewmodelY, -3f, 3f);
         ViewmodelSwitch.IsChecked = _config.ViewmodelEnabled;
         _loading = false;
@@ -181,10 +181,10 @@ public partial class MainWindow : Window
             ? "Stock. The flash and the smoke puff stay."
             : "No flash and no smoke puff when you fire.";
 
-        ViewmodelXValueText.Text = Math.Round(ViewmodelXSlider.Value, 1).ToString("0.0");
+        ViewmodelZValueText.Text = Math.Round(ViewmodelZSlider.Value, 1).ToString("0.0");
         ViewmodelYValueText.Text = Math.Round(ViewmodelYSlider.Value, 1).ToString("0.0");
         const float eps = 0.001f;
-        ViewmodelHint.Text = Math.Abs(_config.ViewmodelX) <= eps && Math.Abs(_config.ViewmodelY) <= eps
+        ViewmodelHint.Text = Math.Abs(_config.ViewmodelZ) <= eps && Math.Abs(_config.ViewmodelY) <= eps
             ? "Stock. The gun sits exactly where the game puts it."
             : "The gun sits at this offset from its stock position. The camera does not move.";
     }
@@ -297,10 +297,10 @@ public partial class MainWindow : Window
         SaveLater();
     }
 
-    private void ViewmodelXSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void ViewmodelZSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (_loading) return;
-        _config.ViewmodelX = (float)Math.Round(e.NewValue, 1);
+        _config.ViewmodelZ = (float)Math.Round(e.NewValue, 1);
         UpdateFovUi();
         SaveLater();
     }

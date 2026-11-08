@@ -301,15 +301,15 @@
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="Viewmodel X Offset" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
-                                <TextBlock x:Name="ViewmodelXValueText" Grid.Column="1" Text="0.0"
+                                <TextBlock Text="Viewmodel Z Offset" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
+                                <TextBlock x:Name="ViewmodelZValueText" Grid.Column="1" Text="0.0"
                                            Style="{StaticResource Value}" MinWidth="76" />
                             </Grid>
 
-                            <Slider x:Name="ViewmodelXSlider" Minimum="-3" Maximum="3"
+                            <Slider x:Name="ViewmodelZSlider" Minimum="-3" Maximum="3"
                                     TickFrequency="0.1" IsSnapToTickEnabled="True"
                                     Style="{StaticResource Slider}" VerticalAlignment="Center"
-                                    ValueChanged="ViewmodelXSlider_ValueChanged" />
+                                    ValueChanged="ViewmodelZSlider_ValueChanged" />
                             <DockPanel Margin="0,2,0,0">
                                 <TextBlock DockPanel.Dock="Right" Text="3.0 right" Style="{StaticResource Subtext}" />
                                 <TextBlock Text="3.0 left" Style="{StaticResource Subtext}" />

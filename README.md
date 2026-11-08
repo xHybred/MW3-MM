@@ -54,7 +54,7 @@ Enabled=1
 
 [Viewmodel]
 Enabled=1
-XOffset=0
+ZOffset=0
 YOffset=0
 ```
 
@@ -83,7 +83,7 @@ apply without a restart.
 | `[Sway] Strength` | 0..1, how far the gun drifts. 1 = stock, 0 = no drift |
 | `[Flash] Enabled` | 1 leaves the muzzle flash and its smoke puff, 0 removes both |
 | `[Viewmodel] Enabled` | 1 applies the two offsets below, 0 leaves the gun where the game puts it |
-| `[Viewmodel] XOffset` | -3..3, slides the gun left (negative) or right (positive) |
+| `[Viewmodel] ZOffset` | -3..3, slides the gun left (negative) or right (positive) |
 | `[Viewmodel] YOffset` | -3..3, slides the gun down (negative) or up (positive) |
 | `[Debug] LogEffectiveFov` | log each weapon's aim FOV when it changes |
 | `[Debug] DvarScan` | log every step of the dvar lookup |
@@ -161,7 +161,7 @@ so both go together. A null effect pointer is safe; the engine simply spawns not
 The gun is placed relative to the camera, and `iw5sp.exe+0x6FD70` offsets it along the view's own
 right, forward and up axes (the same axes `cg_gun_x`, `cg_gun_y` and `cg_gun_z` drive). The runtime
 adds its own offset along the right and up axes after the engine has built the position, so the two
-sliders slide the gun sideways and vertically while the camera and the world stay put. Positive X
+sliders slide the gun sideways and vertically while the camera and the world stay put. Positive Z
 moves the gun right and positive Y moves it up; the range is 3 game units either way, which is
 several times the width of the model. The offsets are applied on every frame, aiming included, and
 nothing is written while both are zero.
