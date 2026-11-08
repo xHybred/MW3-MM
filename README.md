@@ -267,10 +267,13 @@ Output: `out\MW3Mod.dll` and `out\manager\`. The runtime alone is `.\build.ps1`.
   either by downloading the latest release from GitHub or from a `d3d9.dll` you already
   have. Both occupy `d3d9.dll`, so only one can be installed at a time; the proxy sits on
   `X3DAudio1_7.dll`, so the runtime does not collide with them. Neither is bundled.
-- dgVoodoo 2 is a work in progress here. It renders the menus and the level, but with it
-  installed this build of the game never finishes loading a mission: the loading card stays
-  on screen and the level's dvars never register. The same happens with the mod removed, so
-  it is dgVoodoo rather than the runtime. Treat the Direct3D 11 option as an experiment.
+- dgVoodoo 2 ships a configuration that reports 256 MB of video memory, and with that the
+  game renders a mission but never starts it: the loading card stays on screen and the
+  level's dvars never register. The manager raises that line to 1024 MB on install, which
+  is what its own DirectX 9 preset uses, and missions load normally afterwards.
+- dgVoodoo 2 also hides the game's Direct3D 9 device from this mod, so the custom crosshair
+  styles and the frame-time counter do not work while it is installed. The game's own
+  crosshair does.
 - `tools\` holds the throwaway scripts used while reversing: `set_fov.py` writes the dvars
   in a running game from outside, `inspect.py` dumps candidate dvar structs, and
   `patch_weapon_fov.py` served as the proof that overriding the weapon ADS FOV is enough

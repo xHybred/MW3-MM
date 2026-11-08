@@ -632,7 +632,7 @@
                             </DockPanel>
 
                             <TextBlock Margin="0,12,0,0" Style="{StaticResource Subtext}" Opacity="0.7"
-                                       Text="Only one wrapper can own d3d9.dll, so this replaces DXVK or ReShade while it is installed. Its settings live in dgVoodoo.conf. Missions do not load with it yet, so treat Direct3D 11 as an experiment." />
+                                       Text="Only one wrapper can own d3d9.dll, so this replaces DXVK or ReShade while it is installed. Its settings live in dgVoodoo.conf. The game's own crosshair stays; the custom ones need Direct3D 9." />
                         </StackPanel>
                     </Border>
 

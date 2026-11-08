@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -148,9 +148,60 @@ public static class RuntimeInstaller
         File.Copy(sourceDll, Path.Combine(gameDir, D3d9Name), overwrite: true);
 
         if (sourceConf is not null && File.Exists(sourceConf))
-            File.Copy(sourceConf, Path.Combine(gameDir, DgVoodooConfName), overwrite: true);
+        {
+            string conf = Path.Combine(gameDir, DgVoodooConfName);
+            File.Copy(sourceConf, conf, overwrite: true);
+            RaiseVideoMemory(conf);
+        }
 
         Probed.Clear();
+    }
+
+    // dgVoodoo's shipped conf reports 256 MB of video memory, and with that the
+    // game renders a mission but never starts it: the loading card stays on
+    // screen and the level never registers. 1024 MB is what the wrapper's own
+    // DX9 preset uses, and missions load with it.
+    private static void RaiseVideoMemory(string conf)
+    {
+        string[] lines;
+        try
+        {
+            lines = File.ReadAllText(conf).Split('\n');
+        }
+        catch (IOException)
+        {
+            return;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return;
+        }
+
+        bool changed = false;
+        for (int i = 0; i < lines.Length; i++)
+        {
+            int equals = lines[i].IndexOf('=');
+            if (equals < 0) continue;
+            if (!lines[i][..equals].Trim().Equals("VRAM", StringComparison.OrdinalIgnoreCase)) continue;
+
+            string ending = lines[i].EndsWith('\r') ? "\r" : "";
+            lines[i] = "VRAM                                = 1024" + ending;
+            changed = true;
+            break;
+        }
+
+        if (!changed) return;
+
+        try
+        {
+            File.WriteAllText(conf, string.Join('\n', lines));
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
     }
 
     public static bool RemoveD3d11(string gameDir)
