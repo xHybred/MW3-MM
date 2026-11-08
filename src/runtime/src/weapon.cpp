@@ -5,6 +5,7 @@
 
 #include <windows.h>
 
+#include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <cstdint>
@@ -13,7 +14,8 @@ namespace
 {
     // 0x14004E86E0 is indexed by client and holds the WeaponCompleteDef the
     // engine uses for that client: FUN_140022630 reads adsZoomFov at +0x90 from
-    // it. The recoil numbers live in the WeaponDef that sits behind +0x08.
+    // it. The recoil, spread and effect data live in the WeaponDef that sits
+    // behind +0x08.
     constexpr size_t kWeaponDefArray = 0x4E86E0;
     constexpr size_t kRedirectIndex = 0xC8;
     constexpr size_t kWeaponDefPointer = 0x08;
@@ -23,22 +25,46 @@ namespace
     // The engine asks for entity numbers here, not just the four local clients,
     // so survival bots come through with values well above 3.
     constexpr int kMaxClients = 1024;
-    // A kick amplitude is a small fraction of a degree. Anything outside this is
-    // not a weapon def and must not be written to.
+    // A kick amplitude is a small fraction of a degree and a spread is a cone
+    // in degrees. Anything outside this is not a weapon def.
     constexpr float kPlausibleKick = 100.0f;
     constexpr size_t kDefSlots = 64;
 
-    // Amplitudes only. Accel, speed and decay stay native so the kick keeps its
-    // original timing and only travels less far.
-    constexpr size_t kFields[] = {
-        0x72C,  // ads pitch min
-        0x730,  // ads pitch max
-        0x734,  // ads yaw min
-        0x738,  // ads yaw max
-        0x770,  // hip pitch min
-        0x774,  // hip pitch max
-        0x778,  // hip yaw min
-        0x77C,  // hip yaw max
+    enum class Group
+    {
+        Kick,
+        Accuracy,
+        Bloom,
+    };
+
+    struct Field
+    {
+        size_t offset;
+        Group group;
+    };
+
+    constexpr Field kFields[] = {
+        // Amplitudes only. Accel, speed and decay stay native so the kick keeps
+        // its original timing and only travels less far.
+        {0x72C, Group::Kick},  // ads pitch min
+        {0x730, Group::Kick},  // ads pitch max
+        {0x734, Group::Kick},  // ads yaw min
+        {0x738, Group::Kick},  // ads yaw max
+        {0x770, Group::Kick},  // hip pitch min
+        {0x774, Group::Kick},  // hip pitch max
+        {0x778, Group::Kick},  // hip yaw min
+        {0x77C, Group::Kick},  // hip yaw max
+        // The resting cone for each stance. The spread routine lerps between
+        // the min and the max, so scaling both to zero leaves nothing for it to
+        // randomise and every hipfire bullet follows the crosshair.
+        {0x58C, Group::Accuracy},  // stand min
+        {0x590, Group::Accuracy},  // ducked min
+        {0x594, Group::Accuracy},  // prone min
+        {0x598, Group::Accuracy},  // stand max
+        {0x59C, Group::Accuracy},  // ducked max
+        {0x5A0, Group::Accuracy},  // prone max
+        // Added to the cone on each shot, which is the bloom.
+        {0x5A8, Group::Bloom},  // fire add
     };
     constexpr size_t kFieldCount = sizeof(kFields) / sizeof(kFields[0]);
 
@@ -57,6 +83,9 @@ namespace
     std::atomic<bool> g_enabled{true};
     std::atomic<float> g_strength{1.0f};
     std::atomic<bool> g_flashEnabled{true};
+    std::atomic<bool> g_spreadEnabled{true};
+    std::atomic<float> g_spreadAccuracy{0.0f};
+    std::atomic<float> g_spreadBloom{0.0f};
     std::atomic<bool> g_log{false};
     std::atomic<bool> g_reportedClient{false};
     bool g_seenClient[kMaxClients] = {};
@@ -74,6 +103,16 @@ namespace
                 return false;
         }
         return true;
+    }
+
+    float Vanilla(const DefSlot& slot, size_t offset)
+    {
+        for (size_t i = 0; i < kFieldCount; ++i)
+        {
+            if (kFields[i].offset == offset)
+                return slot.vanilla[i];
+        }
+        return 0.0f;
     }
 
     // Weapon names are either the asset name ("acr", "mp412") or the
@@ -122,7 +161,7 @@ namespace
 
         auto* base = static_cast<unsigned char*>(def);
         for (size_t i = 0; i < kFieldCount; ++i)
-            slot->vanilla[i] = *reinterpret_cast<float*>(base + kFields[i]);
+            slot->vanilla[i] = *reinterpret_cast<float*>(base + kFields[i].offset);
         slot->vanillaFlash = *reinterpret_cast<void**>(base + kFlashEffect);
 
         slot->usable = Plausible(slot->vanilla);
@@ -135,9 +174,11 @@ namespace
         if (announce)
         {
             LogF(L"weapon: %S def %p kick pitch %.3f..%.3f yaw %.3f..%.3f", name, def,
-                 slot->vanilla[0], slot->vanilla[1], slot->vanilla[2], slot->vanilla[3]);
-            LogF(L"weapon:   hip pitch %.3f..%.3f yaw %.3f..%.3f", slot->vanilla[4],
-                 slot->vanilla[5], slot->vanilla[6], slot->vanilla[7]);
+                 Vanilla(*slot, 0x72C), Vanilla(*slot, 0x730), Vanilla(*slot, 0x734), Vanilla(*slot, 0x738));
+            LogF(L"weapon:   hip pitch %.3f..%.3f yaw %.3f..%.3f", Vanilla(*slot, 0x770),
+                 Vanilla(*slot, 0x774), Vanilla(*slot, 0x778), Vanilla(*slot, 0x77C));
+            LogF(L"weapon:   spread stand %.3f..%.3f fire add %.3f", Vanilla(*slot, 0x58C),
+                 Vanilla(*slot, 0x598), Vanilla(*slot, 0x5A8));
 
             auto* fx = static_cast<unsigned char*>(slot->vanillaFlash);
             if (fx)
@@ -206,19 +247,32 @@ void weapon::ApplyFromClient(int clientNum)
     if (!slot)
         return;
 
-    const float strength = g_enabled.load(std::memory_order_relaxed)
-                               ? g_strength.load(std::memory_order_relaxed)
-                               : 1.0f;
+    const float kickStrength =
+        g_enabled.load(std::memory_order_relaxed) ? g_strength.load(std::memory_order_relaxed) : 1.0f;
+    const bool spreadOn = g_spreadEnabled.load(std::memory_order_relaxed);
+    const float accuracyStrength =
+        spreadOn ? 1.0f - g_spreadAccuracy.load(std::memory_order_relaxed) : 1.0f;
+    const float bloomStrength =
+        spreadOn ? 1.0f - g_spreadBloom.load(std::memory_order_relaxed) : 1.0f;
 
     auto* base = static_cast<unsigned char*>(weaponDef);
     for (size_t i = 0; i < kFieldCount; ++i)
     {
-        const float wanted = slot->vanilla[i] * strength;
-        auto* value = reinterpret_cast<float*>(base + kFields[i]);
+        float strength = kickStrength;
+        if (kFields[i].group == Group::Accuracy)
+            strength = accuracyStrength;
+        else if (kFields[i].group == Group::Bloom)
+            strength = bloomStrength;
+
+        const float wanted = slot->vanilla[i] * std::clamp(strength, 0.0f, 1.0f);
+        auto* value = reinterpret_cast<float*>(base + kFields[i].offset);
         if (std::fabs(*value - wanted) > 0.0005f)
         {
             if (logging)
-                LogF(L"weapon: %S %p +0x%03zX %.3f -> %.3f", name, weaponDef, kFields[i], *value, wanted);
+            {
+                LogF(L"weapon: %S %p +0x%03zX %.3f -> %.3f", name, weaponDef, kFields[i].offset, *value,
+                     wanted);
+            }
             *value = wanted;
         }
     }
@@ -240,5 +294,8 @@ void weapon::Update(const ModSettings& settings)
     g_enabled.store(settings.recoilEnabled, std::memory_order_relaxed);
     g_strength.store(settings.recoilStrength, std::memory_order_relaxed);
     g_flashEnabled.store(settings.flashEnabled, std::memory_order_relaxed);
-    g_log.store(settings.recoilDebug, std::memory_order_relaxed);
+    g_spreadEnabled.store(settings.spreadEnabled, std::memory_order_relaxed);
+    g_spreadAccuracy.store(settings.spreadAccuracy, std::memory_order_relaxed);
+    g_spreadBloom.store(settings.spreadBloom, std::memory_order_relaxed);
+    g_log.store(settings.recoilDebug || settings.spreadDebug, std::memory_order_relaxed);
 }

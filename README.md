@@ -52,6 +52,11 @@ Strength=1
 [Flash]
 Enabled=1
 
+[Spread]
+Enabled=1
+Accuracy=0
+Bloom=0
+
 [Viewmodel]
 Enabled=1
 XOffset=0
@@ -83,6 +88,8 @@ apply without a restart.
 | `[Sway] Enabled` | 1 scales how far the gun drifts while aiming and moving, 0 leaves it untouched |
 | `[Sway] Strength` | 0..1, how far the gun drifts. 1 = stock, 0 = no drift |
 | `[Flash] Enabled` | 1 leaves the muzzle flash and its smoke puff, 0 removes both |
+| `[Spread] Accuracy` | 0..1, how much of the hipfire cone is removed. 1 = every bullet through the crosshair |
+| `[Spread] Bloom` | 0..1, how much of the per-shot cone growth is removed. 1 = sustained fire stays as tight as the first shot |
 | `[Viewmodel] Enabled` | 1 applies the three offsets below, 0 leaves the gun where the game puts it |
 | `[Viewmodel] XOffset` | -1.5..3, pulls the gun in (negative) for the oversized side pose, pushes it out (positive) |
 | `[Viewmodel] ZOffset` | -3..3, moves the gun in (negative) and out (positive) as it slides |
@@ -168,6 +175,14 @@ passes the eye and the model swings out to the side, which is the wide, low pose
 for. Z slides the gun through the depth the lateral axis gives, positive moving it right and out, Y
 moves it up. The ranges are -1.5..3 for X and -3..3 for Y and Z. The offsets are applied on every
 frame, aiming included, and nothing is written while all three are zero.
+
+Hipfire spread comes from the weapon definition, not from a dvar. Each weapon stores a resting cone per
+stance (`hipSpreadStandMin`, `hipSpreadDuckedMin`, `hipSpreadProneMin` and their max counterparts) and a
+per-shot `hipSpreadFireAdd` that widens it while firing. The engine reads those floats every time it
+works out the cone, so the runtime scales them in place: the Accuracy slider scales the six stance
+values, and with the max at zero the cone cannot grow either; the Bloom slider scales only the
+per-shot add, so the first shot keeps the weapon's own resting accuracy and later shots stop widening
+it. Aiming is untouched; the aim-down-sights cone is a different field (`adsSpread`).
 
 The viewmodel cannot have its own field of view. A probe on the D3D9 device showed the game never
 calls `SetTransform(D3DTS_PROJECTION)` and draws the first-person model with the same projection as

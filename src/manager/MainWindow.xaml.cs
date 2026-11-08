@@ -51,6 +51,9 @@ public partial class MainWindow : Window
         SwaySlider.Value = Math.Clamp(_config.SwayStrength * 100f, 0f, 100f);
         SwaySwitch.IsChecked = _config.SwayEnabled;
         FlashSwitch.IsChecked = _config.FlashEnabled;
+        SpreadSlider.Value = Math.Clamp(_config.SpreadAccuracy * 100f, 0f, 100f);
+        BloomSlider.Value = Math.Clamp(_config.SpreadBloom * 100f, 0f, 100f);
+        SpreadSwitch.IsChecked = _config.SpreadEnabled;
         ViewmodelXSlider.Value = Math.Clamp(_config.ViewmodelX, -1.5f, 3f);
         ViewmodelZSlider.Value = Math.Clamp(_config.ViewmodelZ, -3f, 3f);
         ViewmodelYSlider.Value = Math.Clamp(_config.ViewmodelY, -3f, 3f);
@@ -161,6 +164,21 @@ public partial class MainWindow : Window
             : _config.FlinchStrength <= 0.001f
                 ? "No view kick at all when you take damage."
                 : "Damage kicks the view less, and the minimum kick shrinks with it.";
+
+        SpreadPanel.IsEnabled = runtime;
+        SpreadPanel.Opacity = runtime ? 1.0 : 0.45;
+        SpreadValueText.Text = Math.Round(SpreadSlider.Value).ToString("0") + "%";
+        SpreadHint.Text = _config.SpreadAccuracy <= 0.001f
+            ? "Stock. Hipfire has the cone the weapon data gives it."
+            : _config.SpreadAccuracy >= 0.999f
+                ? "Every hipfire shot goes through the crosshair."
+                : "The cone tightens, so hipfire lands closer to the crosshair.";
+        BloomValueText.Text = Math.Round(BloomSlider.Value).ToString("0") + "%";
+        BloomHint.Text = _config.SpreadBloom <= 0.001f
+            ? "Stock. Firing widens the cone as it always did."
+            : _config.SpreadBloom >= 0.999f
+                ? "Sustained fire no longer widens the cone."
+                : "Firing widens the cone less.";
 
         RecoilPanel.IsEnabled = runtime;
         RecoilPanel.Opacity = runtime ? 1.0 : 0.45;
@@ -296,6 +314,30 @@ public partial class MainWindow : Window
     {
         if (_loading) return;
         _config.FlashEnabled = FlashSwitch.IsChecked == true;
+        UpdateFovUi();
+        SaveLater();
+    }
+
+    private void SpreadSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_loading) return;
+        _config.SpreadAccuracy = (float)Math.Round(e.NewValue) / 100f;
+        UpdateFovUi();
+        SaveLater();
+    }
+
+    private void BloomSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_loading) return;
+        _config.SpreadBloom = (float)Math.Round(e.NewValue) / 100f;
+        UpdateFovUi();
+        SaveLater();
+    }
+
+    private void Spread_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        _config.SpreadEnabled = SpreadSwitch.IsChecked == true;
         UpdateFovUi();
         SaveLater();
     }

@@ -21,6 +21,10 @@ struct ModSettings {
     bool swayEnabled = true;
     float swayStrength = 1.0f;
     bool flashEnabled = true;
+    bool spreadEnabled = true;
+    float spreadAccuracy = 0.0f;
+    float spreadBloom = 0.0f;
+    bool spreadDebug = false;
     bool viewmodelEnabled = true;
     float viewmodelX = 0.0f;
     float viewmodelZ = 0.0f;

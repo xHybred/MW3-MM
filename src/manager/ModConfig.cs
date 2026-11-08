@@ -31,6 +31,9 @@ public sealed class ModConfig
     public bool SwayEnabled { get; set; } = true;
     public float SwayStrength { get; set; } = 1.0f;
     public bool FlashEnabled { get; set; } = true;
+    public bool SpreadEnabled { get; set; } = true;
+    public float SpreadAccuracy { get; set; }
+    public float SpreadBloom { get; set; }
     public bool ViewmodelEnabled { get; set; } = true;
     public float ViewmodelX { get; set; }
     public float ViewmodelZ { get; set; }
@@ -141,6 +144,21 @@ public sealed class ModConfig
                 if (key.ToLowerInvariant() == "enabled")
                     config.FlashEnabled = ParseBool(value, config.FlashEnabled);
             }
+            else if (section.Equals("Spread", StringComparison.OrdinalIgnoreCase))
+            {
+                switch (key.ToLowerInvariant())
+                {
+                    case "enabled": config.SpreadEnabled = ParseBool(value, config.SpreadEnabled); break;
+                    case "accuracy":
+                        if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float accuracy))
+                            config.SpreadAccuracy = Math.Clamp(accuracy, 0f, 1f);
+                        break;
+                    case "bloom":
+                        if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float bloom))
+                            config.SpreadBloom = Math.Clamp(bloom, 0f, 1f);
+                        break;
+                }
+            }
             else if (section.Equals("Viewmodel", StringComparison.OrdinalIgnoreCase))
             {
                 switch (key.ToLowerInvariant())
@@ -208,6 +226,11 @@ public sealed class ModConfig
             "",
             "[Flash]",
             $"Enabled={(FlashEnabled ? 1 : 0)}",
+            "",
+            "[Spread]",
+            $"Enabled={(SpreadEnabled ? 1 : 0)}",
+            "Accuracy=" + SpreadAccuracy.ToString("0.###", CultureInfo.InvariantCulture),
+            "Bloom=" + SpreadBloom.ToString("0.###", CultureInfo.InvariantCulture),
             "",
             "[Viewmodel]",
             $"Enabled={(ViewmodelEnabled ? 1 : 0)}",
