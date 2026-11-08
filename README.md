@@ -200,10 +200,13 @@ The viewmodel cannot have its own field of view. A probe on the D3D9 device show
 calls `SetTransform(D3DTS_PROJECTION)` and draws the first-person model with the same projection as
 the world, so there is no separate matrix to widen.
 
-The crosshair has no size setting: the engine asks `FUN_140024B60` for the material and an integer
-size in pixels every frame, and that function is only called from the crosshair drawing code. The
-runtime hooks it and scales the size it hands back, which resizes the crosshair and nothing else;
-the integer lives in the weapon data, so the size tracks whatever the game was going to draw.
+The crosshair has no size setting. The engine asks one of two getters for the material and an
+integer size in pixels every frame, and every caller of both lives in the crosshair drawing code.
+FUN_140024B60 serves the dot and outline styles from the weapon asset; FUN_140026790 serves the
+four-bar style single player actually shows and reads its size from the per-weapon state object.
+The runtime hooks both and scales the size they hand back, which resizes the crosshair and nothing
+else. The second getter can see the value the first one already scaled, so the runtime recognises
+its own number and re-applies the scale once instead of compounding it.
 Opacity, the dynamic mode and hiding the crosshair are plain dvars (`cg_crosshairAlpha`,
 `cg_crosshairAlphaMin`, `cg_crosshairDynamic`, `cg_drawCrosshair`) that the runtime writes and
 restores like the others.
