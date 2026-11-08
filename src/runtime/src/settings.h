@@ -23,6 +23,7 @@ struct ModSettings {
     bool flashEnabled = true;
     bool spreadEnabled = true;
     float spreadAccuracy = 0.0f;
+    float spreadAimAccuracy = 0.0f;
     float spreadBloom = 0.0f;
     bool spreadDebug = false;
     bool viewmodelEnabled = true;

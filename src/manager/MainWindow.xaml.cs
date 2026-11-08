@@ -89,6 +89,7 @@ public partial class MainWindow : Window
         SwaySlider.Value = Math.Clamp(_config.SwayStrength * 100f, 0f, 100f);
         FlashSwitch.IsChecked = !_config.FlashEnabled;
         SpreadSlider.Value = Math.Clamp(_config.SpreadAccuracy * 100f, 0f, 100f);
+        SpreadAimSlider.Value = Math.Clamp(_config.SpreadAimAccuracy * 100f, 0f, 100f);
         BloomSlider.Value = Math.Clamp(_config.SpreadBloom * 100f, 0f, 100f);
         ViewmodelXSlider.Value = Math.Clamp(_config.ViewmodelX, -1.5f, 3f);
         ViewmodelZSlider.Value = Math.Clamp(_config.ViewmodelZ, -3f, 3f);
@@ -339,10 +340,16 @@ public partial class MainWindow : Window
         SpreadPanel.Opacity = runtime ? 1.0 : 0.45;
         SpreadValueText.Text = Math.Round(SpreadSlider.Value).ToString("0") + "%";
         SpreadHint.Text = _config.SpreadAccuracy <= 0.001f
-            ? "Stock. Hipfire and aiming have the cone the weapon data gives them."
+            ? "Stock. Hipfire keeps the cone the weapon data gives it."
             : _config.SpreadAccuracy >= 0.999f
-                ? "Every shot goes through the crosshair, hipfire and aimed."
-                : "The cone tightens, so shots land closer to the crosshair.";
+                ? "Every hipfire shot goes through the crosshair."
+                : "The hipfire cone tightens, so shots land closer to the crosshair.";
+        SpreadAimValueText.Text = Math.Round(SpreadAimSlider.Value).ToString("0") + "%";
+        SpreadAimHint.Text = _config.SpreadAimAccuracy <= 0.001f
+            ? "Stock. Aiming keeps the cone the weapon data gives it."
+            : _config.SpreadAimAccuracy >= 0.999f
+                ? "Every aimed shot goes through the sight."
+                : "The aimed cone tightens, so shots land closer to the sight.";
         BloomValueText.Text = Math.Round(BloomSlider.Value).ToString("0") + "%";
         BloomHint.Text = _config.SpreadBloom <= 0.001f
             ? "Stock. Firing widens the cone as it always did."
@@ -608,6 +615,14 @@ public partial class MainWindow : Window
     {
         if (_loading) return;
         _config.SpreadAccuracy = (float)Math.Round(e.NewValue) / 100f;
+        UpdateFovUi();
+        SaveLater();
+    }
+
+    private void SpreadAimSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_loading) return;
+        _config.SpreadAimAccuracy = (float)Math.Round(e.NewValue) / 100f;
         UpdateFovUi();
         SaveLater();
     }

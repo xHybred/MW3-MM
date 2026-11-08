@@ -50,6 +50,7 @@ bool LoadSettings(ModSettings& out) {
     out.flashEnabled = GetPrivateProfileIntW(L"Flash", L"Enabled", 1, path.c_str()) != 0;
     out.spreadEnabled = GetPrivateProfileIntW(L"Spread", L"Enabled", 1, path.c_str()) != 0;
     out.spreadAccuracy = Clamp01(ReadFloatKey(path, L"Spread", L"Accuracy", 0.0f));
+    out.spreadAimAccuracy = Clamp01(ReadFloatKey(path, L"Spread", L"AimAccuracy", 0.0f));
     out.spreadBloom = Clamp01(ReadFloatKey(path, L"Spread", L"Bloom", 0.0f));
     out.spreadDebug = GetPrivateProfileIntW(L"Debug", L"Spread", 0, path.c_str()) != 0;
     out.viewmodelEnabled = GetPrivateProfileIntW(L"Viewmodel", L"Enabled", 1, path.c_str()) != 0;

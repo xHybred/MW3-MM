@@ -44,6 +44,7 @@ namespace
     {
         Kick,
         Accuracy,
+        Aim,
         Bloom,
     };
 
@@ -75,8 +76,9 @@ namespace
         {0x5A0, Group::Accuracy},  // prone max
         // The cone the bullet can land in while aiming. It is a single value,
         // not a spread that grows with fire, which is why waiting for the gun
-        // to settle never helped: the sight points at the centre of it.
-        {0x764, Group::Accuracy},  // ads spread
+        // to settle never helped: the sight points at the centre of it. Kept in
+        // its own group so it gets its own slider.
+        {0x764, Group::Aim},  // ads spread
         // Added to the cone on each shot, which is the bloom.
         {0x5A8, Group::Bloom},  // fire add
     };
@@ -103,6 +105,7 @@ namespace
     std::atomic<bool> g_flashEnabled{true};
     std::atomic<bool> g_spreadEnabled{true};
     std::atomic<float> g_spreadAccuracy{0.0f};
+    std::atomic<float> g_spreadAim{0.0f};
     std::atomic<float> g_spreadBloom{0.0f};
     std::atomic<bool> g_log{false};
     std::atomic<bool> g_reportedClient{false};
@@ -223,6 +226,7 @@ namespace
     {
         float kick;
         float accuracy;
+        float aim;
         float bloom;
     };
 
@@ -245,6 +249,8 @@ namespace
             float strength = strengths.kick;
             if (kFields[i].group == Group::Accuracy)
                 strength = strengths.accuracy;
+            else if (kFields[i].group == Group::Aim)
+                strength = strengths.aim;
             else if (kFields[i].group == Group::Bloom)
                 strength = strengths.bloom;
 
@@ -346,6 +352,7 @@ void weapon::ApplyFromClient(int clientNum)
     const Strengths strengths{
         enabled ? g_strength.load(std::memory_order_relaxed) : 1.0f,
         spreadOn ? 1.0f - g_spreadAccuracy.load(std::memory_order_relaxed) : 1.0f,
+        spreadOn ? 1.0f - g_spreadAim.load(std::memory_order_relaxed) : 1.0f,
         spreadOn ? 1.0f - g_spreadBloom.load(std::memory_order_relaxed) : 1.0f,
     };
 
@@ -387,6 +394,7 @@ void weapon::Update(const ModSettings& settings)
     g_flashEnabled.store(settings.flashEnabled, std::memory_order_relaxed);
     g_spreadEnabled.store(settings.spreadEnabled, std::memory_order_relaxed);
     g_spreadAccuracy.store(settings.spreadAccuracy, std::memory_order_relaxed);
+    g_spreadAim.store(settings.spreadAimAccuracy, std::memory_order_relaxed);
     g_spreadBloom.store(settings.spreadBloom, std::memory_order_relaxed);
     g_log.store(settings.recoilDebug || settings.spreadDebug, std::memory_order_relaxed);
 }

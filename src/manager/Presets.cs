@@ -47,6 +47,7 @@ public static class Presets
             SwayStrength = 1.0f,
             FlashEnabled = true,
             SpreadAccuracy = 0f,
+            SpreadAimAccuracy = 0f,
             SpreadBloom = 0f,
 
             ViewmodelEnabled = true,
@@ -81,6 +82,7 @@ public static class Presets
             SwayStrength = 0f,
             FlashEnabled = false,
             SpreadAccuracy = 0.25f,
+            SpreadAimAccuracy = 0.25f,
             SpreadBloom = 0.65f,
 
             ViewmodelEnabled = true,
@@ -115,6 +117,7 @@ public static class Presets
             SwayStrength = 0f,
             FlashEnabled = false,
             SpreadAccuracy = 1.0f,
+            SpreadAimAccuracy = 1.0f,
             SpreadBloom = 1.0f,
 
             ViewmodelEnabled = true,
@@ -149,6 +152,7 @@ public static class Presets
             SwayStrength = 0.5f,
             FlashEnabled = false,
             SpreadAccuracy = 1.0f,
+            SpreadAimAccuracy = 1.0f,
             SpreadBloom = 1.0f,
 
             ViewmodelEnabled = true,

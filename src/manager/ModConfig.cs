@@ -35,6 +35,7 @@ public sealed class ModConfig
     public bool FlashEnabled { get; set; } = true;
     public bool SpreadEnabled { get; set; } = true;
     public float SpreadAccuracy { get; set; }
+    public float SpreadAimAccuracy { get; set; }
     public float SpreadBloom { get; set; }
     public bool ViewmodelEnabled { get; set; } = true;
     public float ViewmodelX { get; set; }
@@ -71,6 +72,7 @@ public sealed class ModConfig
         SwayStrength = other.SwayStrength;
         FlashEnabled = other.FlashEnabled;
         SpreadAccuracy = other.SpreadAccuracy;
+        SpreadAimAccuracy = other.SpreadAimAccuracy;
         SpreadBloom = other.SpreadBloom;
 
         ViewmodelEnabled = other.ViewmodelEnabled;
@@ -105,6 +107,7 @@ public sealed class ModConfig
                Same(SwayStrength, other.SwayStrength) &&
                FlashEnabled == other.FlashEnabled &&
                Same(SpreadAccuracy, other.SpreadAccuracy) &&
+               Same(SpreadAimAccuracy, other.SpreadAimAccuracy) &&
                Same(SpreadBloom, other.SpreadBloom) &&
                ViewmodelEnabled == other.ViewmodelEnabled &&
                Same(ViewmodelX, other.ViewmodelX) &&
@@ -230,6 +233,10 @@ public sealed class ModConfig
                         if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float accuracy))
                             config.SpreadAccuracy = Math.Clamp(accuracy, 0f, 1f);
                         break;
+                    case "aimaccuracy":
+                        if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float aimAccuracy))
+                            config.SpreadAimAccuracy = Math.Clamp(aimAccuracy, 0f, 1f);
+                        break;
                     case "bloom":
                         if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float bloom))
                             config.SpreadBloom = Math.Clamp(bloom, 0f, 1f);
@@ -334,6 +341,7 @@ public sealed class ModConfig
             "[Spread]",
             $"Enabled={(SpreadEnabled ? 1 : 0)}",
             "Accuracy=" + SpreadAccuracy.ToString("0.###", CultureInfo.InvariantCulture),
+            "AimAccuracy=" + SpreadAimAccuracy.ToString("0.###", CultureInfo.InvariantCulture),
             "Bloom=" + SpreadBloom.ToString("0.###", CultureInfo.InvariantCulture),
             "",
             "[Viewmodel]",

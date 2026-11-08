@@ -206,7 +206,7 @@
                         <Grid x:Name="SpreadPanel">
                             <StackPanel>
                                 <TextBlock Text="Accuracy" Style="{StaticResource Section}" />
-                                <TextBlock Text="The cone your shots can land in, hipfire and aimed."
+                                <TextBlock Text="How tight the cone is, hipfire and aimed. The two are separate."
                                            Style="{StaticResource Subtext}" Margin="0,3,0,0" />
 
                                 <Grid Margin="0,18,0,0">
@@ -214,7 +214,7 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Cone size" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
+                                    <TextBlock Text="Hipfire cone" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
                                     <TextBlock x:Name="SpreadValueText" Grid.Column="1" Text="0%"
                                                Style="{StaticResource Value}" MinWidth="76" />
                                 </Grid>
@@ -227,6 +227,25 @@
                                     <TextBlock Text="Stock" Style="{StaticResource EndLabel}" />
                                 </DockPanel>
                                 <TextBlock x:Name="SpreadHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
+
+                                <Grid Margin="0,16,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Aim cone" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="SpreadAimValueText" Grid.Column="1" Text="0%"
+                                               Style="{StaticResource Value}" MinWidth="76" />
+                                </Grid>
+                                <Slider x:Name="SpreadAimSlider" Minimum="0" Maximum="100"
+                                        TickFrequency="5" IsSnapToTickEnabled="True"
+                                        Style="{StaticResource Slider}" VerticalAlignment="Center"
+                                        ValueChanged="SpreadAimSlider_ValueChanged" />
+                                <DockPanel Margin="0,2,0,0">
+                                    <TextBlock DockPanel.Dock="Right" Text="Every shot through the sight" Style="{StaticResource EndLabel}" />
+                                    <TextBlock Text="Stock" Style="{StaticResource EndLabel}" />
+                                </DockPanel>
+                                <TextBlock x:Name="SpreadAimHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
 
                                 <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,16,0,0" />
 
