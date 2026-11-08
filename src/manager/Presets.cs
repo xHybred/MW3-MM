@@ -96,5 +96,39 @@ public static class Presets
             CrosshairStyle = 0,
         });
 
-    public static IReadOnlyList<Preset> All { get; } = new[] { Default, Recommended };
+    public static Preset Halo { get; } = new(
+        "Halo",
+        "The tuned setup with the ring crosshair: perfect hipfire, no bloom, and the gun pulled in.",
+        new ModConfig
+        {
+            Enabled = true,
+            Affected = true,
+            Fov = 105f,
+
+            AimEnabled = true,
+            AimFlat = false,
+            AimZoom = 1.07f,
+
+            FlinchStrength = 0.4f,
+            BlurStrength = 0f,
+            RecoilStrength = 0.4f,
+            SwayStrength = 0f,
+            FlashEnabled = false,
+            SpreadAccuracy = 1.0f,
+            SpreadBloom = 1.0f,
+
+            ViewmodelEnabled = true,
+            ViewmodelX = -1.2f,
+            ViewmodelZ = 1.8f,
+            ViewmodelY = 0.5f,
+
+            CrosshairEnabled = true,
+            CrosshairSize = 0.9f,
+            CrosshairOpacity = 0.85f,
+            CrosshairDynamic = false,
+            CrosshairShow = true,
+            CrosshairStyle = 2,
+        });
+
+    public static IReadOnlyList<Preset> All { get; } = new[] { Default, Recommended, Halo };
 }
