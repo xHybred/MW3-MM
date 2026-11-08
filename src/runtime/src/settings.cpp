@@ -49,9 +49,12 @@ bool LoadSettings(ModSettings& out) {
     out.swayStrength = Clamp01(ReadFloatKey(path, L"Sway", L"Strength", 1.0f));
     out.flashEnabled = GetPrivateProfileIntW(L"Flash", L"Enabled", 1, path.c_str()) != 0;
     out.viewmodelEnabled = GetPrivateProfileIntW(L"Viewmodel", L"Enabled", 1, path.c_str()) != 0;
-    out.viewmodelInfluence = ReadFloatKey(path, L"Viewmodel", L"Influence", 1.0f);
-    if (out.viewmodelInfluence < 0.0f) out.viewmodelInfluence = 0.0f;
-    if (out.viewmodelInfluence > 2.0f) out.viewmodelInfluence = 2.0f;
+    out.viewmodelX = ReadFloatKey(path, L"Viewmodel", L"XOffset", 0.0f);
+    out.viewmodelY = ReadFloatKey(path, L"Viewmodel", L"YOffset", 0.0f);
+    if (out.viewmodelX < -3.0f) out.viewmodelX = -3.0f;
+    if (out.viewmodelX > 3.0f) out.viewmodelX = 3.0f;
+    if (out.viewmodelY < -3.0f) out.viewmodelY = -3.0f;
+    if (out.viewmodelY > 3.0f) out.viewmodelY = 3.0f;
     out.viewmodelDebug = GetPrivateProfileIntW(L"Debug", L"Viewmodel", 0, path.c_str()) != 0;
     out.logEffectiveFov = GetPrivateProfileIntW(L"Debug", L"LogEffectiveFov", 0, path.c_str()) != 0;
     out.dvarScanVerbose = GetPrivateProfileIntW(L"Debug", L"DvarScan", 0, path.c_str()) != 0;

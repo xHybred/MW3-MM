@@ -54,7 +54,8 @@ Enabled=1
 
 [Viewmodel]
 Enabled=1
-Influence=1
+XOffset=0
+YOffset=0
 ```
 
 **Remove** in the manager (or deleting that one DLL) puts the game back to vanilla.
@@ -81,8 +82,9 @@ apply without a restart.
 | `[Sway] Enabled` | 1 scales how far the gun drifts while aiming and moving, 0 leaves it untouched |
 | `[Sway] Strength` | 0..1, how far the gun drifts. 1 = stock, 0 = no drift |
 | `[Flash] Enabled` | 1 leaves the muzzle flash and its smoke puff, 0 removes both |
-| `[Viewmodel] Enabled` | 1 lets the runtime adjust how much the gun shrinks with field of view, 0 leaves it alone |
-| `[Viewmodel] Influence` | 0..2, how much the gun follows your field of view. 1 = stock, 0 = the gun keeps its size, 2 = it shrinks twice as fast |
+| `[Viewmodel] Enabled` | 1 applies the two offsets below, 0 leaves the gun where the game puts it |
+| `[Viewmodel] XOffset` | -3..3, slides the gun left (negative) or right (positive) |
+| `[Viewmodel] YOffset` | -3..3, slides the gun down (negative) or up (positive) |
 | `[Debug] LogEffectiveFov` | log each weapon's aim FOV when it changes |
 | `[Debug] DvarScan` | log every step of the dvar lookup |
 
@@ -157,14 +159,16 @@ toggle is off and puts it back when it is on. The smoke puff at the barrel comes
 so both go together. A null effect pointer is safe; the engine simply spawns nothing.
 
 The gun is placed relative to the camera, and `iw5sp.exe+0x6FD70` offsets it along the view's own
-right, forward and up axes (the same axes `cg_gun_x`, `cg_gun_y` and `cg_gun_z` drive). The forward one
-changes its apparent size without touching the world: because the gun root sits at the camera and the
-model extends forward, moving it back makes it larger and moving it forward makes it smaller. The
-runtime adds `offset = -0.25 * (1 - 1/k)` with `k = (tan(fov/2) / tan(pivot/2))^(1 - influence)`, so at
-influence 1 the offset is zero and nothing is written; 0 cancels the shrink entirely; values above 1
-push the gun further than stock. The offset is faded out by the aim fraction so aiming is untouched,
-and clamped to 0.18 units towards the camera and 0.5 away. The gun root sits at the camera, so the
-visible model is only a few tenths of a metre away and a larger pull-in would put it behind the eye.
+right, forward and up axes (the same axes `cg_gun_x`, `cg_gun_y` and `cg_gun_z` drive). The runtime
+adds its own offset along the right and up axes after the engine has built the position, so the two
+sliders slide the gun sideways and vertically while the camera and the world stay put. Positive X
+moves the gun right and positive Y moves it up; the range is 3 game units either way, which is
+several times the width of the model. The offsets are applied on every frame, aiming included, and
+nothing is written while both are zero.
+
+The viewmodel cannot have its own field of view. A probe on the D3D9 device showed the game never
+calls `SetTransform(D3DTS_PROJECTION)` and draws the first-person model with the same projection as
+the world, so there is no separate matrix to widen.
 
 ## Build
 

@@ -14,89 +14,50 @@
 namespace
 {
     // FUN_14006FD70 builds the first-person model's origin for the frame. The
-    // last thing it does is add cg_gun_z times the view's forward axis
-    // (client+0x26AA0), which moves the gun along the view axis and changes
-    // how large it looks without touching the world camera. Doing the same
-    // here per frame keeps the correction smooth through the aim transition.
+    // engine adds cg_gun_x/y/z along the view's own axes here, so the same
+    // place can shift the weapon sideways and vertically by a fixed amount.
     constexpr size_t kOriginOffset = 0x6FD70;
     constexpr unsigned char kPrologue[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x6C, 0x24, 0x10};
 
     constexpr size_t kOriginVector = 0x10;
     // client+0x26A88/0x26A94/0x26AA0 are the view's right, forward and up
-    // axes: cg_gun_x moves the gun sideways, cg_gun_y along the view axis and
-    // cg_gun_z vertically. Only the forward one changes apparent size.
-    constexpr size_t kForwardAxis = 0x26A94;
-    constexpr size_t kAimFraction = 0x338;
+    // axes. The first one points left (its x component is negative while
+    // looking down -Y), so it is negated to make a positive slider move the
+    // weapon to the right; the third points down in world space, so it is
+    // negated too and a positive Y moves the weapon up.
+    constexpr size_t kLeftAxis = 0x26A88;
+    constexpr size_t kUpAxis = 0x26AA0;
 
-    // The model root sits at the camera, so the visible geometry is only a few
-    // tenths of a metre away: pulling it in by a metre puts it behind the eye
-    // and the projection flips it across the screen. Everything here is small.
-    constexpr float kGunDistance = 0.25f;
-    // axB points away from the camera, so a negative offset pulls the gun in
-    // and a positive one pushes it out. Pulling in is capped tight because the
-    // model passes through the near plane; pushing out has more room.
-    constexpr float kMaxPullIn = 0.18f;
-    constexpr float kMaxPushOut = 0.50f;
-    constexpr float kPi = 3.14159265358979f;
+    constexpr float kMaxOffset = 3.0f;
 
     using OriginFn = void (*)(void*, void*, void*, void*);
 
     OriginFn g_original = nullptr;
     std::atomic<bool> g_enabled{true};
-    std::atomic<float> g_influence{1.0f};
-    std::atomic<float> g_fov{65.0f};
-    std::atomic<float> g_pivot{65.0f};
+    std::atomic<float> g_x{0.0f};
+    std::atomic<float> g_y{0.0f};
     std::atomic<bool> g_debug{false};
-    std::atomic<float> g_lastOffset{0.0f};
     std::atomic<ULONGLONG> g_nextLog{0};
-
-    float OffsetFor(float fov, float pivot, float influence)
-    {
-        if (!(fov > 1.0f) || !(pivot > 1.0f))
-            return 0.0f;
-
-        // Apparent size falls off as 1/tan(fov/2). Anything above 1 means the
-        // gun is drawn smaller than it was at the pivot field of view.
-        const float r = std::tan(fov * kPi / 360.0f) / std::tan(pivot * kPi / 360.0f);
-        if (!(r > 0.0f))
-            return 0.0f;
-
-        const float k = std::pow(r, 1.0f - influence);
-        if (!std::isfinite(k) || k < 0.05f || k > 20.0f)
-            return 0.0f;
-
-        const float offset = -kGunDistance * (1.0f - 1.0f / k);
-        return std::clamp(offset, -kMaxPullIn, kMaxPushOut);
-    }
 
     void __fastcall HookedOrigin(void* client, void* out, void* in, void* a4)
     {
         g_original(client, out, in, a4);
 
-        if (!client || !out)
+        if (!client || !out || !g_enabled.load(std::memory_order_relaxed))
             return;
 
-        const auto* bytes = static_cast<const unsigned char*>(client);
-        const float blend = 1.0f - std::clamp(*reinterpret_cast<const float*>(bytes + kAimFraction), 0.0f, 1.0f);
+        const float x = std::clamp(g_x.load(std::memory_order_relaxed), -kMaxOffset, kMaxOffset);
+        const float y = std::clamp(g_y.load(std::memory_order_relaxed), -kMaxOffset, kMaxOffset);
 
-        float offset = 0.0f;
-        if (g_enabled.load(std::memory_order_relaxed))
-            offset = OffsetFor(g_fov.load(std::memory_order_relaxed), g_pivot.load(std::memory_order_relaxed),
-                               g_influence.load(std::memory_order_relaxed));
-
-        // Aiming already narrows the view to roughly the pivot, so the
-        // correction fades out with the aim fraction instead of shoving the
-        // raised weapon into the camera.
-        offset *= blend;
-        g_lastOffset.store(offset, std::memory_order_relaxed);
-
-        if (std::fabs(offset) > 0.0005f)
+        if (std::fabs(x) > 0.0005f || std::fabs(y) > 0.0005f)
         {
+            const auto* bytes = static_cast<const unsigned char*>(client);
             auto* origin = reinterpret_cast<float*>(static_cast<unsigned char*>(out) + kOriginVector);
-            const auto* forward = reinterpret_cast<const float*>(bytes + kForwardAxis);
-            origin[0] += offset * forward[0];
-            origin[1] += offset * forward[1];
-            origin[2] += offset * forward[2];
+            const auto* left = reinterpret_cast<const float*>(bytes + kLeftAxis);
+            const auto* up = reinterpret_cast<const float*>(bytes + kUpAxis);
+
+            for (size_t i = 0; i < 3; ++i)
+                origin[i] += -x * left[i] - y * up[i];
         }
 
         if (g_debug.load(std::memory_order_relaxed))
@@ -105,9 +66,7 @@ namespace
             if (now >= g_nextLog.load(std::memory_order_relaxed))
             {
                 g_nextLog.store(now + 500, std::memory_order_relaxed);
-                LogF(L"viewmodel: fov %.2f pivot %.2f influence %.2f aim %.2f offset %.3f",
-                     g_fov.load(std::memory_order_relaxed), g_pivot.load(std::memory_order_relaxed),
-                     g_influence.load(std::memory_order_relaxed), 1.0f - blend, offset);
+                LogF(L"viewmodel: x %.2f y %.2f", x, y);
             }
         }
     }
@@ -141,11 +100,10 @@ bool viewmodel::Install()
     return true;
 }
 
-void viewmodel::Update(const ModSettings& settings, float pivotFov)
+void viewmodel::Update(const ModSettings& settings)
 {
     g_enabled.store(settings.viewmodelEnabled, std::memory_order_relaxed);
-    g_influence.store(settings.viewmodelInfluence, std::memory_order_relaxed);
-    g_fov.store(settings.fov, std::memory_order_relaxed);
-    g_pivot.store(pivotFov, std::memory_order_relaxed);
+    g_x.store(settings.viewmodelX, std::memory_order_relaxed);
+    g_y.store(settings.viewmodelY, std::memory_order_relaxed);
     g_debug.store(settings.viewmodelDebug, std::memory_order_relaxed);
 }

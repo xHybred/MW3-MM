@@ -32,7 +32,8 @@ public sealed class ModConfig
     public float SwayStrength { get; set; } = 1.0f;
     public bool FlashEnabled { get; set; } = true;
     public bool ViewmodelEnabled { get; set; } = true;
-    public float ViewmodelInfluence { get; set; } = 1.0f;
+    public float ViewmodelX { get; set; }
+    public float ViewmodelY { get; set; }
     public bool LogEffectiveFov { get; set; }
     public bool DvarScan { get; set; }
 
@@ -144,9 +145,13 @@ public sealed class ModConfig
                 switch (key.ToLowerInvariant())
                 {
                     case "enabled": config.ViewmodelEnabled = ParseBool(value, config.ViewmodelEnabled); break;
-                    case "influence":
-                        if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float influence))
-                            config.ViewmodelInfluence = Math.Clamp(influence, 0f, 2f);
+                    case "xoffset":
+                        if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float x))
+                            config.ViewmodelX = Math.Clamp(x, -3f, 3f);
+                        break;
+                    case "yoffset":
+                        if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float y))
+                            config.ViewmodelY = Math.Clamp(y, -3f, 3f);
                         break;
                 }
             }
@@ -201,7 +206,8 @@ public sealed class ModConfig
             "",
             "[Viewmodel]",
             $"Enabled={(ViewmodelEnabled ? 1 : 0)}",
-            "Influence=" + ViewmodelInfluence.ToString("0.###", CultureInfo.InvariantCulture),
+            "XOffset=" + ViewmodelX.ToString("0.###", CultureInfo.InvariantCulture),
+            "YOffset=" + ViewmodelY.ToString("0.###", CultureInfo.InvariantCulture),
             "",
             "[Debug]",
             $"LogEffectiveFov={(LogEffectiveFov ? 1 : 0)}",

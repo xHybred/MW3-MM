@@ -51,7 +51,8 @@ public partial class MainWindow : Window
         SwaySlider.Value = Math.Clamp(_config.SwayStrength * 100f, 0f, 100f);
         SwaySwitch.IsChecked = _config.SwayEnabled;
         FlashSwitch.IsChecked = _config.FlashEnabled;
-        ViewmodelSlider.Value = Math.Clamp(_config.ViewmodelInfluence * 100f, 0f, 200f);
+        ViewmodelXSlider.Value = Math.Clamp(_config.ViewmodelX, -3f, 3f);
+        ViewmodelYSlider.Value = Math.Clamp(_config.ViewmodelY, -3f, 3f);
         ViewmodelSwitch.IsChecked = _config.ViewmodelEnabled;
         _loading = false;
 
@@ -180,14 +181,12 @@ public partial class MainWindow : Window
             ? "Stock. The flash and the smoke puff stay."
             : "No flash and no smoke puff when you fire.";
 
-        ViewmodelValueText.Text = Math.Round(ViewmodelSlider.Value).ToString("0") + "%";
-        ViewmodelHint.Text = _config.ViewmodelInfluence >= 0.999f && _config.ViewmodelInfluence <= 1.001f
-            ? "Stock. The gun shrinks with your field of view exactly as it always did."
-            : _config.ViewmodelInfluence <= 0.001f
-                ? "The gun keeps its size as your field of view changes."
-                : _config.ViewmodelInfluence < 1f
-                    ? "The gun shrinks less than stock as your field of view rises."
-                    : "The gun shrinks more than stock as your field of view rises.";
+        ViewmodelXValueText.Text = Math.Round(ViewmodelXSlider.Value, 1).ToString("0.0");
+        ViewmodelYValueText.Text = Math.Round(ViewmodelYSlider.Value, 1).ToString("0.0");
+        const float eps = 0.001f;
+        ViewmodelHint.Text = Math.Abs(_config.ViewmodelX) <= eps && Math.Abs(_config.ViewmodelY) <= eps
+            ? "Stock. The gun sits exactly where the game puts it."
+            : "The gun sits at this offset from its stock position. The camera does not move.";
     }
 
     private void RefreshStatus()
@@ -298,10 +297,18 @@ public partial class MainWindow : Window
         SaveLater();
     }
 
-    private void ViewmodelSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void ViewmodelXSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (_loading) return;
-        _config.ViewmodelInfluence = (float)Math.Round(e.NewValue) / 100f;
+        _config.ViewmodelX = (float)Math.Round(e.NewValue, 1);
+        UpdateFovUi();
+        SaveLater();
+    }
+
+    private void ViewmodelYSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_loading) return;
+        _config.ViewmodelY = (float)Math.Round(e.NewValue, 1);
         UpdateFovUi();
         SaveLater();
     }

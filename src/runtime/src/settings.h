@@ -22,7 +22,8 @@ struct ModSettings {
     float swayStrength = 1.0f;
     bool flashEnabled = true;
     bool viewmodelEnabled = true;
-    float viewmodelInfluence = 1.0f;
+    float viewmodelX = 0.0f;
+    float viewmodelY = 0.0f;
     bool viewmodelDebug = false;
     bool logEffectiveFov = false;
     bool dvarScanVerbose = false;
