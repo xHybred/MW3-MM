@@ -130,5 +130,39 @@ public static class Presets
             CrosshairStyle = 2,
         });
 
-    public static IReadOnlyList<Preset> All { get; } = new[] { Default, Recommended, Halo };
+    public static Preset Bodycam { get; } = new(
+        "Bodycam",
+        "The handheld-camera look: pulled-in gun, perfect hipfire, half the sway and a small faint crosshair.",
+        new ModConfig
+        {
+            Enabled = true,
+            Affected = true,
+            Fov = 105f,
+
+            AimEnabled = true,
+            AimFlat = false,
+            AimZoom = 1.02f,
+
+            FlinchStrength = 0.4f,
+            BlurStrength = 0f,
+            RecoilStrength = 0.4f,
+            SwayStrength = 0.5f,
+            FlashEnabled = false,
+            SpreadAccuracy = 1.0f,
+            SpreadBloom = 1.0f,
+
+            ViewmodelEnabled = true,
+            ViewmodelX = 1.2f,
+            ViewmodelZ = 2.6f,
+            ViewmodelY = 1.4f,
+
+            CrosshairEnabled = true,
+            CrosshairSize = 0.65f,
+            CrosshairOpacity = 0.85f,
+            CrosshairDynamic = false,
+            CrosshairShow = true,
+            CrosshairStyle = 0,
+        });
+
+    public static IReadOnlyList<Preset> All { get; } = new[] { Default, Recommended, Halo, Bodycam };
 }

@@ -14,9 +14,18 @@ namespace
 {
     // 0x14004E86E0 is indexed by client and holds the WeaponCompleteDef the
     // engine uses for that client: FUN_140022630 reads adsZoomFov at +0x90 from
-    // it. The recoil, spread and effect data live in the WeaponDef that sits
-    // behind +0x08.
+    // it, and the effect pointers at +0x08 lead to the WeaponDef the renderer
+    // uses.
     constexpr size_t kWeaponDefArray = 0x4E86E0;
+    // 0x14004E8E60 is a second per-slot table, and this is the object the
+    // gameplay code actually consults: the spread routine at 0x14002690A reads
+    // +0x58C..+0x5A0 from it, the fire path at 0x1400274C4 reads +0x5A8, and
+    // the kick routine at 0x14002B40C reads +0x72C..+0x77C from it. On a level
+    // where this entry is the same object as the WeaponDef, writing the def is
+    // enough; where the engine keeps a separate copy, the def write alone never
+    // reached gameplay (hipfire stayed vanilla until the weapon was re-equipped
+    // and the copy was rebuilt). Both targets are written.
+    constexpr size_t kWeaponStateArray = 0x4E8E60;
     constexpr size_t kRedirectIndex = 0xC8;
     constexpr size_t kWeaponDefPointer = 0x08;
     // WeaponDef::viewFlashEffect: the first-person muzzle flash, smoke puff
@@ -26,8 +35,8 @@ namespace
     // so survival bots come through with values well above 3.
     constexpr int kMaxClients = 1024;
     // A kick amplitude is a small fraction of a degree and a spread is a cone
-    // in degrees. Anything outside this is not a weapon def.
-    constexpr float kPlausibleKick = 100.0f;
+    // in degrees. Anything outside this is not one of our fields.
+    constexpr float kPlausibleValue = 100.0f;
     constexpr size_t kDefSlots = 64;
 
     enum class Group
@@ -72,8 +81,12 @@ namespace
     {
         void* def;
         float vanilla[kFieldCount];
+        // The state copy does not necessarily share the whole layout with the
+        // WeaponDef, so each offset is judged on its own instead of rejecting
+        // the object wholesale.
+        bool fieldOk[kFieldCount];
         void* vanillaFlash;
-        bool usable;
+        size_t usableFields;
     };
 
     DefSlot g_defs[kDefSlots];
@@ -95,14 +108,9 @@ namespace
         return reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     }
 
-    bool Plausible(const float* values)
+    bool PlausibleValue(float value)
     {
-        for (size_t i = 0; i < kFieldCount; ++i)
-        {
-            if (!std::isfinite(values[i]) || std::fabs(values[i]) > kPlausibleKick)
-                return false;
-        }
-        return true;
+        return std::isfinite(value) && std::fabs(value) <= kPlausibleValue;
     }
 
     float Vanilla(const DefSlot& slot, size_t offset)
@@ -136,14 +144,14 @@ namespace
         return false;
     }
 
-    // Keeps one set of original values per weapon. Without this, writing a
+    // Keeps one set of original values per object. Without this, writing a
     // scaled value and later scaling it again would compound every frame.
-    DefSlot* SlotFor(void* def, const char* name, bool announce)
+    DefSlot* SlotFor(void* def, const char* name, const char* label, bool withFlash, bool announce)
     {
         for (size_t i = 0; i < g_defCount; ++i)
         {
             if (g_defs[i].def == def)
-                return g_defs[i].usable ? &g_defs[i] : nullptr;
+                return g_defs[i].usableFields > 0 ? &g_defs[i] : nullptr;
         }
 
         if (g_defCount >= kDefSlots)
@@ -151,49 +159,117 @@ namespace
             if (!g_slotsFull)
             {
                 g_slotsFull = true;
-                LogF(L"weapon: %zu weapon defs tracked, leaving the rest alone", kDefSlots);
+                LogF(L"weapon: %zu weapon objects tracked, leaving the rest alone", kDefSlots);
             }
             return nullptr;
         }
 
         DefSlot* slot = &g_defs[g_defCount++];
         slot->def = def;
+        slot->usableFields = 0;
 
         auto* base = static_cast<unsigned char*>(def);
         for (size_t i = 0; i < kFieldCount; ++i)
-            slot->vanilla[i] = *reinterpret_cast<float*>(base + kFields[i].offset);
+        {
+            const float value = *reinterpret_cast<float*>(base + kFields[i].offset);
+            slot->vanilla[i] = value;
+            slot->fieldOk[i] = PlausibleValue(value);
+            if (slot->fieldOk[i])
+                ++slot->usableFields;
+        }
         slot->vanillaFlash = *reinterpret_cast<void**>(base + kFlashEffect);
 
-        slot->usable = Plausible(slot->vanilla);
-        if (!slot->usable)
+        if (slot->usableFields == 0)
         {
-            LogF(L"weapon: %S at %p does not look like a weapon def, left alone", name, def);
+            LogF(L"weapon: %S %S at %p holds nothing we recognise, left alone", name, label, def);
             return nullptr;
         }
 
         if (announce)
         {
-            LogF(L"weapon: %S def %p kick pitch %.3f..%.3f yaw %.3f..%.3f", name, def,
-                 Vanilla(*slot, 0x72C), Vanilla(*slot, 0x730), Vanilla(*slot, 0x734), Vanilla(*slot, 0x738));
+            LogF(L"weapon: %S %S %p kick pitch %.3f..%.3f yaw %.3f..%.3f", name, label, def,
+                 Vanilla(*slot, 0x72C), Vanilla(*slot, 0x730), Vanilla(*slot, 0x734),
+                 Vanilla(*slot, 0x738));
             LogF(L"weapon:   hip pitch %.3f..%.3f yaw %.3f..%.3f", Vanilla(*slot, 0x770),
                  Vanilla(*slot, 0x774), Vanilla(*slot, 0x778), Vanilla(*slot, 0x77C));
             LogF(L"weapon:   spread stand %.3f..%.3f fire add %.3f", Vanilla(*slot, 0x58C),
                  Vanilla(*slot, 0x598), Vanilla(*slot, 0x5A8));
 
-            auto* fx = static_cast<unsigned char*>(slot->vanillaFlash);
-            if (fx)
+            if (withFlash)
             {
-                const char* fxName = *reinterpret_cast<char**>(fx);
-                LogF(L"weapon:   flash %p %S elems %d/%d/%d", slot->vanillaFlash,
-                     fxName ? fxName : "?", *reinterpret_cast<int*>(fx + 0x14),
-                     *reinterpret_cast<int*>(fx + 0x18), *reinterpret_cast<int*>(fx + 0x1C));
-            }
-            else
-            {
-                LogF(L"weapon:   flash none");
+                auto* fx = static_cast<unsigned char*>(slot->vanillaFlash);
+                if (fx)
+                {
+                    const char* fxName = *reinterpret_cast<char**>(fx);
+                    LogF(L"weapon:   flash %p %S elems %d/%d/%d", slot->vanillaFlash,
+                         fxName ? fxName : "?", *reinterpret_cast<int*>(fx + 0x14),
+                         *reinterpret_cast<int*>(fx + 0x18), *reinterpret_cast<int*>(fx + 0x1C));
+                }
+                else
+                {
+                    LogF(L"weapon:   flash none");
+                }
             }
         }
         return slot;
+    }
+
+    struct Strengths
+    {
+        float kick;
+        float accuracy;
+        float bloom;
+    };
+
+    // Scales the fields this object exposes. Offsets whose original value does
+    // not look like one of ours are skipped, so a state copy with a different
+    // layout cannot be damaged.
+    void ApplyToTarget(void* target, const char* name, const char* label, bool withFlash,
+                       const Strengths& strengths, bool logging)
+    {
+        DefSlot* slot = SlotFor(target, name, label, withFlash, logging);
+        if (!slot)
+            return;
+
+        auto* base = static_cast<unsigned char*>(target);
+        for (size_t i = 0; i < kFieldCount; ++i)
+        {
+            if (!slot->fieldOk[i])
+                continue;
+
+            float strength = strengths.kick;
+            if (kFields[i].group == Group::Accuracy)
+                strength = strengths.accuracy;
+            else if (kFields[i].group == Group::Bloom)
+                strength = strengths.bloom;
+
+            const float wanted = slot->vanilla[i] * std::clamp(strength, 0.0f, 1.0f);
+            auto* value = reinterpret_cast<float*>(base + kFields[i].offset);
+            if (std::fabs(*value - wanted) > 0.0005f)
+            {
+                if (logging)
+                {
+                    LogF(L"weapon: %S %S %p +0x%03zX %.3f -> %.3f", name, label, target,
+                         kFields[i].offset, *value, wanted);
+                }
+                *value = wanted;
+            }
+        }
+
+        // Nulling the effect is the only lever for the muzzle flash: there is no
+        // dvar for it and no separate smoke slot to switch independently. Only
+        // the WeaponDef carries effect pointers.
+        if (withFlash)
+        {
+            void* wantedFlash = g_flashEnabled.load(std::memory_order_relaxed) ? slot->vanillaFlash : nullptr;
+            auto* flashSlot = reinterpret_cast<void**>(base + kFlashEffect);
+            if (*flashSlot != wantedFlash)
+            {
+                if (logging)
+                    LogF(L"weapon: %S flash %p -> %p", name, *flashSlot, wantedFlash);
+                *flashSlot = wantedFlash;
+            }
+        }
     }
 }
 
@@ -209,7 +285,9 @@ void weapon::ApplyFromClient(int clientNum)
     }
 
     auto** defs = reinterpret_cast<void**>(ImageBase() + kWeaponDefArray);
+    auto** states = reinterpret_cast<void**>(ImageBase() + kWeaponStateArray);
     void* def = defs[clientNum];
+    int index = clientNum;
 
     // Which clients the engine actually asks about, and what each slot holds.
     // This is the only way to see why a weapon's fields are never touched.
@@ -225,14 +303,15 @@ void weapon::ApplyFromClient(int clientNum)
     auto* name = *reinterpret_cast<char**>(def);
 
     // Clients that hold a redirect entry point at another slot; the engine
-    // follows the byte at +0xC8 to the real def. Anything that is still not a
-    // weapon after that is not ours to touch.
+    // follows the byte at +0xC8 to the real def, and uses the same index for
+    // the state table.
     if (!IsWeaponName(name))
     {
         const auto redirect =
             *reinterpret_cast<const unsigned char*>(static_cast<const char*>(def) + kRedirectIndex);
         if (redirect >= kMaxClients || !defs[redirect])
             return;
+        index = redirect;
         def = defs[redirect];
         name = *reinterpret_cast<char**>(def);
         if (!IsWeaponName(name))
@@ -243,50 +322,20 @@ void weapon::ApplyFromClient(int clientNum)
     if (!weaponDef)
         return;
 
-    DefSlot* slot = SlotFor(weaponDef, name, logging);
-    if (!slot)
-        return;
-
-    const float kickStrength =
-        g_enabled.load(std::memory_order_relaxed) ? g_strength.load(std::memory_order_relaxed) : 1.0f;
+    const bool enabled = g_enabled.load(std::memory_order_relaxed);
     const bool spreadOn = g_spreadEnabled.load(std::memory_order_relaxed);
-    const float accuracyStrength =
-        spreadOn ? 1.0f - g_spreadAccuracy.load(std::memory_order_relaxed) : 1.0f;
-    const float bloomStrength =
-        spreadOn ? 1.0f - g_spreadBloom.load(std::memory_order_relaxed) : 1.0f;
+    const Strengths strengths{
+        enabled ? g_strength.load(std::memory_order_relaxed) : 1.0f,
+        spreadOn ? 1.0f - g_spreadAccuracy.load(std::memory_order_relaxed) : 1.0f,
+        spreadOn ? 1.0f - g_spreadBloom.load(std::memory_order_relaxed) : 1.0f,
+    };
 
-    auto* base = static_cast<unsigned char*>(weaponDef);
-    for (size_t i = 0; i < kFieldCount; ++i)
-    {
-        float strength = kickStrength;
-        if (kFields[i].group == Group::Accuracy)
-            strength = accuracyStrength;
-        else if (kFields[i].group == Group::Bloom)
-            strength = bloomStrength;
+    ApplyToTarget(weaponDef, name, "def", true, strengths, logging);
 
-        const float wanted = slot->vanilla[i] * std::clamp(strength, 0.0f, 1.0f);
-        auto* value = reinterpret_cast<float*>(base + kFields[i].offset);
-        if (std::fabs(*value - wanted) > 0.0005f)
-        {
-            if (logging)
-            {
-                LogF(L"weapon: %S %p +0x%03zX %.3f -> %.3f", name, weaponDef, kFields[i].offset, *value,
-                     wanted);
-            }
-            *value = wanted;
-        }
-    }
-
-    // Nulling the effect is the only lever for the muzzle flash: there is no
-    // dvar for it and no separate smoke slot to switch independently.
-    void* wantedFlash = g_flashEnabled.load(std::memory_order_relaxed) ? slot->vanillaFlash : nullptr;
-    auto* flashSlot = reinterpret_cast<void**>(base + kFlashEffect);
-    if (*flashSlot != wantedFlash)
-    {
-        if (logging)
-            LogF(L"weapon: %S flash %p -> %p", name, *flashSlot, wantedFlash);
-        *flashSlot = wantedFlash;
-    }
+    // The gameplay readers use the state table, which may be a separate copy.
+    void* state = states[index];
+    if (state && state != weaponDef)
+        ApplyToTarget(state, name, "state", false, strengths, logging);
 }
 
 void weapon::Update(const ModSettings& settings)

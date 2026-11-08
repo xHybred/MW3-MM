@@ -62,8 +62,13 @@
         <Border Grid.Row="1" Background="{StaticResource CardBg}" CornerRadius="8"
                 Padding="6" Margin="24,0,24,12">
             <DockPanel>
-                <StackPanel x:Name="PresetBar" DockPanel.Dock="Right" Orientation="Horizontal"
-                            VerticalAlignment="Center" Margin="10,0,4,0" />
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
+                            VerticalAlignment="Center" Margin="10,0,4,0">
+                    <TextBlock Text="Preset" Style="{StaticResource Subtext}"
+                               VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <ComboBox x:Name="PresetBox" Style="{StaticResource Dropdown}" Width="152"
+                              VerticalAlignment="Center" SelectionChanged="PresetBox_SelectionChanged" />
+                </StackPanel>
                 <StackPanel Orientation="Horizontal">
                     <Button x:Name="NavAim" Content="Aim" Style="{StaticResource NavButton}" Click="Nav_Click" />
                     <Button x:Name="NavWeapon" Content="Weapon" Style="{StaticResource NavButton}" Click="Nav_Click" />

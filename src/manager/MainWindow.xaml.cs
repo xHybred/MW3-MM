@@ -65,7 +65,7 @@ public partial class MainWindow : Window
             try { _config.Save(); } catch (IOException) { /* the panel still shows defaults */ }
         }
 
-        BuildPresetBar();
+        BuildPresetBox();
         Refresh();
         ShowPage(0);
         _statusTimer.Tick += (_, _) => RefreshStatus();
@@ -104,8 +104,9 @@ public partial class MainWindow : Window
     private readonly Button[] _navButtons = new Button[6];
     private readonly FrameworkElement[] _pages = new FrameworkElement[6];
 
-    private readonly List<(Preset Preset, Button Button)> _presetButtons = new();
-    private TextBlock _customLabel = null!;
+    // True while the box is being pointed at a preset by code, so the
+    // SelectionChanged that follows does not apply it back over the live values.
+    private bool _presetUpdating;
     private int _page;
 
     private void ShowPage(int index)
@@ -140,39 +141,32 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Builds one button per preset in <see cref="Presets.All"/>, so adding a
-    /// preset is one entry in that list and nothing here.
+    /// Fills the preset list from <see cref="Presets.All"/>, so adding a preset
+    /// is one entry in that list and nothing here. "Custom" is the state where
+    /// the live values no longer match any of them.
     /// </summary>
-    private void BuildPresetBar()
+    private void BuildPresetBox()
     {
-        var nav = (Style)FindResource("NavButton");
-        PresetBar.Children.Clear();
-        _presetButtons.Clear();
-
+        _presetUpdating = true;
+        PresetBox.Items.Clear();
         foreach (Preset preset in Presets.All)
-        {
-            var button = new Button
-            {
-                Content = preset.Name,
-                Style = nav,
-                Margin = new Thickness(4, 0, 0, 0),
-                ToolTip = preset.Description,
-            };
-            button.Click += (_, _) => ApplyPreset(preset);
-            PresetBar.Children.Add(button);
-            _presetButtons.Add((preset, button));
-        }
+            PresetBox.Items.Add(preset.Name);
+        PresetBox.Items.Add("Custom");
+        _presetUpdating = false;
 
-        _customLabel = new TextBlock
-        {
-            Text = "Custom",
-            Style = (Style)FindResource("EndLabel"),
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(10, 0, 6, 0),
-            Visibility = Visibility.Collapsed,
-        };
-        PresetBar.Children.Add(_customLabel);
-        RefreshPresetBar();
+        RefreshPresetBox();
+    }
+
+    private void PresetBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || _presetUpdating)
+            return;
+
+        int index = PresetBox.SelectedIndex;
+        if (index < 0 || index >= Presets.All.Count)
+            return;
+
+        ApplyPreset(Presets.All[index]);
     }
 
     private void ApplyPreset(Preset preset)
@@ -188,26 +182,30 @@ public partial class MainWindow : Window
         StatusText.Text = preset.Name + " applied. A running game picks this up within a second.";
         _statusHoldUntil = Environment.TickCount64 + 4000;
         UpdateFovUi();
-        RefreshPresetBar();
+        RefreshPresetBox();
     }
 
-    /// <summary>Highlights the preset the live values still match, if any.</summary>
-    private void RefreshPresetBar()
+    /// <summary>Points the list at the preset the live values still match.</summary>
+    private void RefreshPresetBox()
     {
-        Preset? active = null;
-        foreach ((Preset preset, Button button) in _presetButtons)
+        int active = -1;
+        for (int i = 0; i < Presets.All.Count; ++i)
         {
-            if (active is null && _config.MatchesFeatureValues(preset.Values)) active = preset;
+            if (_config.MatchesFeatureValues(Presets.All[i].Values))
+            {
+                active = i;
+                break;
+            }
         }
 
-        foreach ((Preset preset, Button button) in _presetButtons)
-        {
-            bool on = ReferenceEquals(preset, active);
-            button.Background = (Brush)FindResource(on ? "Accent" : "CardBg");
-            button.Foreground = (Brush)FindResource(on ? "Bg" : "Muted");
-        }
+        bool custom = active < 0;
+        _presetUpdating = true;
+        PresetBox.SelectedIndex = custom ? PresetBox.Items.Count - 1 : active;
+        _presetUpdating = false;
 
-        _customLabel.Visibility = active is null ? Visibility.Visible : Visibility.Collapsed;
+        PresetBox.ToolTip = custom
+            ? "The live values do not match a preset."
+            : Presets.All[active].Description;
     }
 
     private void Refresh()
@@ -658,7 +656,7 @@ public partial class MainWindow : Window
         {
             _config.Save();
             StatusText.Text = "Saved. A running game picks this up within a second.";
-            RefreshPresetBar();
+            RefreshPresetBox();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

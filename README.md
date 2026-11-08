@@ -17,9 +17,10 @@ does not), then press **Install** in the FOV runtime row and pick a FOV.
 The manager only writes files and settings; it does not need to stay running and does not
 need to launch the game. The game loads the mod on every start.
 
-Settings are grouped into tabs, and the buttons at the right of the tab bar apply a whole
-configuration at once: **Default** puts every value back to stock, **Recommended** is a
-tuned starting point. Change anything afterwards and the app shows `Custom` instead.
+Settings are grouped into tabs, and the preset list at the right of the tab bar applies a whole
+configuration at once: **Default** puts every value back to stock, **Recommended** is a tuned
+starting point, **Halo** adds the ring crosshair, and **Bodycam** is the pulled-in, perfect
+hipfire look. Change anything afterwards and the list switches to `Custom`.
 
 Manual install, if you prefer:
 
@@ -170,12 +171,14 @@ registered settings touches it. The scripts call `setBlur`, which lands in the e
 the picture stays sharp. Because it is the same entry point the scripts use for any blur,
 scripted moments lose their blur too.
 
-Weapon recoil is per weapon data, not a dvar, so the runtime reads the loaded `WeaponCompleteDef`
-the engine already hands it for the aiming FOV, follows it to the `WeaponDef` behind it, and
-scales the four kick amplitudes there (ADS and hipfire pitch and yaw). Accel, speed and decay
-stay untouched, so the gun keeps its firing rhythm and only travels less far. Values are
-recorded per weapon the first time it is seen, so switching or picking a weapon up never
-compounds the scaling.
+Weapon recoil and hipfire spread are per weapon data, not dvars. The engine keeps two objects
+per weapon: the `WeaponDef` the game hands the renderer, and a per-slot copy that gameplay reads
+for spread and kick. They are often the same address, but not in every mission, so the runtime
+writes both whenever they differ. It scales the four kick amplitudes (ADS and hipfire pitch and
+yaw) and the six hipfire spread limits plus the per-shot bloom. Accel, speed and decay stay
+untouched, so the gun keeps its firing rhythm and only travels less far. Values are recorded per
+object the first time it is seen, so switching or picking a weapon up never compounds the
+scaling.
 
 Weapon sway is the viewmodel's own idle drift. It is not a weapon field and not a dvar: the engine
 builds three sine terms from a per-player counter and adds them straight onto the first-person view
