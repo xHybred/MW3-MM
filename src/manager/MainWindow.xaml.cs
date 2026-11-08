@@ -820,6 +820,16 @@ public partial class MainWindow : Window
             return;
         }
 
+        // The slot check comes before the download so a wrapper that is already
+        // installed is named straight away instead of after a 9 MB fetch.
+        var taken = RuntimeInstaller.Owner(_gameDir);
+        if (taken != RuntimeInstaller.D3d9Owner.Nobody)
+        {
+            StatusText.Text = $"d3d9.dll is taken by {RuntimeInstaller.OwnerName(taken)}. Remove it first.";
+            _statusHoldUntil = Environment.TickCount64 + 4000;
+            return;
+        }
+
         _rendererBusy = true;
         RefreshD3d11Row();
 
