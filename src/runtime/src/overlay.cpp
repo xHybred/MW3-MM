@@ -26,6 +26,14 @@ std::atomic<float> g_alpha{1.0f};
 std::atomic<float> g_verticalOffset{0.0f};
 std::atomic<ULONGLONG> g_engineDrewAt{0};
 std::atomic<unsigned int> g_color{0xFFFFFFFFu};
+std::atomic<bool> g_frameTime{false};
+
+// Frame timing window, kept to report how expensive the frame actually is
+// rather than how many screenshots were skipped.
+ULONGLONG g_frameWindowStart = 0;
+ULONGLONG g_lastFrameAt = 0;
+unsigned g_frameCount = 0;
+float g_worstFrameMs = 0.0f;
 
 using Direct3DCreate9Fn = IDirect3D9*(__stdcall*)(UINT);
 using CreateDeviceFn = HRESULT(__stdcall*)(IDirect3D9*, UINT, D3DDEVTYPE, HWND, DWORD,
@@ -39,7 +47,6 @@ SwapPresentFn g_swapPresentOriginal = nullptr;
 
 IDirect3DDevice9* g_device = nullptr;
 IDirect3DStateBlock9* g_block = nullptr;
-void** g_d3d9Vtable = nullptr;
 
 struct Vertex {
     float x, y, z, rhw;
@@ -219,8 +226,44 @@ void DrawOverlay(IDirect3DDevice9* device) {
     if (g_block) g_block->Apply();
 }
 
+void SampleFrameTime() {
+    if (!g_frameTime.load(std::memory_order_relaxed)) {
+        g_frameWindowStart = 0;
+        g_frameCount = 0;
+        g_worstFrameMs = 0.0f;
+        return;
+    }
+
+    const ULONGLONG now = GetTickCount64();
+    if (g_lastFrameAt != 0) {
+        const float ms = static_cast<float>(now - g_lastFrameAt);
+        if (ms > g_worstFrameMs) g_worstFrameMs = ms;
+    }
+    g_lastFrameAt = now;
+
+    if (g_frameWindowStart == 0) {
+        g_frameWindowStart = now;
+        g_frameCount = 0;
+        g_worstFrameMs = 0.0f;
+        return;
+    }
+
+    ++g_frameCount;
+    const ULONGLONG span = now - g_frameWindowStart;
+    if (span < 1000) return;
+
+    const double seconds = static_cast<double>(span) / 1000.0;
+    const double fps = g_frameCount / seconds;
+    LogF(L"frame: %.1f fps, %.2f ms average, %.2f ms worst over %u frames", fps,
+         1000.0 / fps, static_cast<double>(g_worstFrameMs), g_frameCount);
+    g_frameWindowStart = now;
+    g_frameCount = 0;
+    g_worstFrameMs = 0.0f;
+}
+
 HRESULT __stdcall HookedSwapPresent(IDirect3DSwapChain9* chain, const RECT* src, const RECT* dst,
                                     HWND hwnd, const RGNDATA* dirty, DWORD flags) {
+    SampleFrameTime();
     if (g_device) {
         __try {
             DrawOverlay(g_device);
@@ -231,44 +274,85 @@ HRESULT __stdcall HookedSwapPresent(IDirect3DSwapChain9* chain, const RECT* src,
     return g_swapPresentOriginal(chain, src, dst, hwnd, dirty, flags);
 }
 
+// ReShade and dgVoodoo both wrap d3d9 and can hand this code pointers that are
+// not what the interface claims, so a pointer is checked before it is used.
+bool ReadableMemory(const void* address) {
+    if (address == nullptr) return false;
+    MEMORY_BASIC_INFORMATION info{};
+    if (VirtualQuery(address, &info, sizeof(info)) == 0) return false;
+    if (info.State != MEM_COMMIT) return false;
+    return (info.Protect & (PAGE_NOACCESS | PAGE_GUARD)) == 0;
+}
+
 HRESULT __stdcall HookedCreateDevice(IDirect3D9* self, UINT adapter, D3DDEVTYPE type, HWND focus,
                                      DWORD flags, D3DPRESENT_PARAMETERS* params,
                                      IDirect3DDevice9** out) {
     const HRESULT hr = g_createDeviceOriginal(self, adapter, type, focus, flags, params, out);
-    if (SUCCEEDED(hr) && out != nullptr && *out != nullptr && g_swapPresentOriginal == nullptr) {
-        g_device = *out;
+    if (FAILED(hr) || out == nullptr || g_swapPresentOriginal != nullptr) return hr;
 
-        IDirect3DSwapChain9* chain = nullptr;
-        if (FAILED(g_device->GetSwapChain(0, &chain)) || !chain) {
-            LogF(L"overlay: no swap chain, custom crosshair unavailable");
-            return hr;
+    // A proxy in front of d3d9 (ReShade, dgVoodoo) can call this entry with
+    // arguments that do not match its real signature, so the result is checked
+    // and the whole probe runs guarded: a bad pointer must never take the game
+    // down just because the crosshair cannot be drawn.
+    IDirect3DDevice9* device = nullptr;
+    IDirect3DSwapChain9* chain = nullptr;
+    void* present = nullptr;
+
+    __try {
+        if (reinterpret_cast<uintptr_t>(out) >= 0x10000 && ReadableMemory(out)) {
+            device = *out;
+            if (device != nullptr && ReadableMemory(device) &&
+                device->GetSwapChain(0, &chain) == D3D_OK && chain != nullptr &&
+                ReadableMemory(chain)) {
+                present = (*reinterpret_cast<void***>(chain))[3];
+            }
         }
-        void** vtable = *reinterpret_cast<void***>(chain);
-        const auto present = reinterpret_cast<SwapPresentFn>(vtable[3]);
-        if (MH_CreateHook(reinterpret_cast<void*>(present),
-                          reinterpret_cast<void*>(&HookedSwapPresent),
-                          reinterpret_cast<void**>(&g_swapPresentOriginal)) == MH_OK &&
-            MH_EnableHook(reinterpret_cast<void*>(present)) == MH_OK) {
-            LogF(L"overlay: swap chain present hook installed");
-        } else {
-            g_swapPresentOriginal = nullptr;
-            LogF(L"overlay: swap chain present hook failed");
-        }
-        chain->Release();
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        device = nullptr;
+        chain = nullptr;
+        present = nullptr;
     }
+
+    if (device == nullptr || present == nullptr) {
+        if (chain != nullptr) chain->Release();
+        LogF(L"overlay: device behind the d3d9 proxy is not usable, custom crosshair off");
+        return hr;
+    }
+
+    g_device = device;
+    LogF(L"overlay: device %p created", g_device);
+
+    if (MH_CreateHook(present, reinterpret_cast<void*>(&HookedSwapPresent),
+                      reinterpret_cast<void**>(&g_swapPresentOriginal)) == MH_OK &&
+        MH_EnableHook(present) == MH_OK) {
+        LogF(L"overlay: swap chain present hook installed");
+    } else {
+        g_swapPresentOriginal = nullptr;
+        LogF(L"overlay: swap chain present hook failed");
+    }
+    chain->Release();
     return hr;
 }
 
 IDirect3D9* __stdcall HookedDirect3DCreate9(UINT sdkVersion) {
     IDirect3D9* d3d9 = g_create9Original(sdkVersion);
-    if (!d3d9) return d3d9;
+    if (!d3d9 || g_createDeviceOriginal != nullptr) return d3d9;
 
+    // Hook the CreateDevice entry instead of swapping the object's vtable: a
+    // wrapper in front of d3d9 (dgVoodoo for the Vulkan/D3D11 route) is free to
+    // lay its vtable out the way it likes, and replacing it made the call arrive
+    // with the wrong arguments.
     void** vtable = *reinterpret_cast<void***>(d3d9);
-    g_d3d9Vtable = new void*[32];
-    memcpy(g_d3d9Vtable, vtable, sizeof(void*) * 32);
-    g_d3d9Vtable[15] = reinterpret_cast<void*>(&HookedCreateDevice);
-    g_createDeviceOriginal = reinterpret_cast<CreateDeviceFn>(vtable[15]);
-    *reinterpret_cast<void***>(d3d9) = g_d3d9Vtable;
+    void* createDevice = vtable[15];
+    if (MH_CreateHook(createDevice,
+                      reinterpret_cast<void*>(&HookedCreateDevice),
+                      reinterpret_cast<void**>(&g_createDeviceOriginal)) == MH_OK &&
+        MH_EnableHook(createDevice) == MH_OK) {
+        LogF(L"overlay: create device hook installed");
+    } else {
+        g_createDeviceOriginal = nullptr;
+        LogF(L"overlay: create device hook failed");
+    }
     return d3d9;
 }
 
@@ -319,6 +403,7 @@ bool Install() {
 
 void Update(const ModSettings& settings) {
     g_enabled.store(settings.crosshairEnabled, std::memory_order_relaxed);
+    g_frameTime.store(settings.frameTimeDebug, std::memory_order_relaxed);
     g_style.store(settings.crosshairStyle, std::memory_order_relaxed);
     g_size.store(settings.crosshairSize, std::memory_order_relaxed);
     g_alpha.store(settings.crosshairOpacity, std::memory_order_relaxed);
