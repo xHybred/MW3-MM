@@ -339,10 +339,10 @@ public partial class MainWindow : Window
         SpreadPanel.Opacity = runtime ? 1.0 : 0.45;
         SpreadValueText.Text = Math.Round(SpreadSlider.Value).ToString("0") + "%";
         SpreadHint.Text = _config.SpreadAccuracy <= 0.001f
-            ? "Stock. Hipfire has the cone the weapon data gives it."
+            ? "Stock. Hipfire and aiming have the cone the weapon data gives them."
             : _config.SpreadAccuracy >= 0.999f
-                ? "Every hipfire shot goes through the crosshair."
-                : "The cone tightens, so hipfire lands closer to the crosshair.";
+                ? "Every shot goes through the crosshair, hipfire and aimed."
+                : "The cone tightens, so shots land closer to the crosshair.";
         BloomValueText.Text = Math.Round(BloomSlider.Value).ToString("0") + "%";
         BloomHint.Text = _config.SpreadBloom <= 0.001f
             ? "Stock. Firing widens the cone as it always did."

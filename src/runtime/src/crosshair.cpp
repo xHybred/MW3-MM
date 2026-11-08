@@ -86,11 +86,14 @@ void ScaleSize(int* size) {
     for (int i = 5; i > 0; --i) recent[i] = recent[i - 1];
     recent[0] = Pair{base, scaled};
 
-    if (g_debug.load(std::memory_order_relaxed) &&
+    static ULONGLONG nextLog = 0;
+    const ULONGLONG now = GetTickCount64();
+    if (g_debug.load(std::memory_order_relaxed) && now >= nextLog &&
         (base != g_lastBase.load(std::memory_order_relaxed) ||
          scaled != g_lastScaled.load(std::memory_order_relaxed))) {
         g_lastBase.store(base, std::memory_order_relaxed);
         g_lastScaled.store(scaled, std::memory_order_relaxed);
+        nextLog = now + 2000;
         LogF(L"crosshair: size %d -> %d (%.2fx)", base, scaled, factor);
     }
 }

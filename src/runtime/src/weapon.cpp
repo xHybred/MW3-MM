@@ -9,6 +9,7 @@
 #include <atomic>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 
 namespace
 {
@@ -72,6 +73,10 @@ namespace
         {0x598, Group::Accuracy},  // stand max
         {0x59C, Group::Accuracy},  // ducked max
         {0x5A0, Group::Accuracy},  // prone max
+        // The cone the bullet can land in while aiming. It is a single value,
+        // not a spread that grows with fire, which is why waiting for the gun
+        // to settle never helped: the sight points at the centre of it.
+        {0x764, Group::Accuracy},  // ads spread
         // Added to the cone on each shot, which is the bloom.
         {0x5A8, Group::Bloom},  // fire add
     };
@@ -192,8 +197,8 @@ namespace
                  Vanilla(*slot, 0x738));
             LogF(L"weapon:   hip pitch %.3f..%.3f yaw %.3f..%.3f", Vanilla(*slot, 0x770),
                  Vanilla(*slot, 0x774), Vanilla(*slot, 0x778), Vanilla(*slot, 0x77C));
-            LogF(L"weapon:   spread stand %.3f..%.3f fire add %.3f", Vanilla(*slot, 0x58C),
-                 Vanilla(*slot, 0x598), Vanilla(*slot, 0x5A8));
+            LogF(L"weapon:   spread stand %.3f..%.3f fire add %.3f aimed %.3f", Vanilla(*slot, 0x58C),
+                 Vanilla(*slot, 0x598), Vanilla(*slot, 0x5A8), Vanilla(*slot, 0x764));
 
             if (withFlash)
             {
@@ -287,6 +292,9 @@ void weapon::ApplyFromClient(int clientNum)
     auto** defs = reinterpret_cast<void**>(ImageBase() + kWeaponDefArray);
     auto** states = reinterpret_cast<void**>(ImageBase() + kWeaponStateArray);
     void* def = defs[clientNum];
+    void* rawDef = def;
+    const char* rawName = def ? *reinterpret_cast<char**>(def) : nullptr;
+    int redirect = -1;
     int index = clientNum;
 
     // Which clients the engine actually asks about, and what each slot holds.
@@ -302,21 +310,32 @@ void weapon::ApplyFromClient(int clientNum)
 
     auto* name = *reinterpret_cast<char**>(def);
 
-    // Clients that hold a redirect entry point at another slot; the engine
-    // follows the byte at +0xC8 to the real def, and uses the same index for
-    // the state table.
-    if (!IsWeaponName(name))
+    // The engine picks the slot like this: a def whose name starts with "iw5_"
+    // is its own slot, anything else follows the byte at +0xC8 (see 0x140022630
+    // and 0x1400268CA). Single-player names such as "acr" take the redirect path
+    // too, and an attachment variant can point at a different slot than the
+    // entry the client table handed us - a hybrid optic is exactly that case.
+    const int redirectByte =
+        *reinterpret_cast<const unsigned char*>(static_cast<const char*>(def) + kRedirectIndex);
+    const bool mpName = name != nullptr && std::strncmp(name, "iw5_", 4) == 0;
+    if (!mpName && redirectByte > 0 && redirectByte < kMaxClients && defs[redirectByte])
     {
-        const auto redirect =
-            *reinterpret_cast<const unsigned char*>(static_cast<const char*>(def) + kRedirectIndex);
-        if (redirect >= kMaxClients || !defs[redirect])
-            return;
-        index = redirect;
-        def = defs[redirect];
-        name = *reinterpret_cast<char**>(def);
-        if (!IsWeaponName(name))
-            return;
+        void* redirected = defs[redirectByte];
+        char* redirectedName = *reinterpret_cast<char**>(redirected);
+        // Slot 0 is "none" and some entries are placeholders; following those
+        // would replace a real weapon with nothing.
+        if (IsWeaponName(redirectedName) && std::strcmp(redirectedName, "none") != 0 &&
+            std::strcmp(redirectedName, "defaultweapon") != 0)
+        {
+            redirect = redirectByte;
+            index = redirectByte;
+            def = redirected;
+            name = redirectedName;
+        }
     }
+
+    if (!IsWeaponName(name))
+        return;
 
     void* weaponDef = *reinterpret_cast<void* const*>(static_cast<char*>(def) + kWeaponDefPointer);
     if (!weaponDef)
@@ -336,6 +355,29 @@ void weapon::ApplyFromClient(int clientNum)
     void* state = states[index];
     if (state && state != weaponDef)
         ApplyToTarget(state, name, "state", false, strengths, logging);
+
+    // What the engine holds for this slot right now. An attachment or optic that
+    // resolves somewhere else shows up as a different pointer here, so a report
+    // like "the hybrid sight ignores the spread" can be read instead of guessed.
+    if (logging)
+    {
+        static ULONGLONG nextWatch = 0;
+        const ULONGLONG now = GetTickCount64();
+        if (now >= nextWatch)
+        {
+            nextWatch = now + 2000;
+            void* target = state ? state : weaponDef;
+            const auto read = [target](size_t offset)
+            {
+                float value = 0.0f;
+                std::memcpy(&value, static_cast<const char*>(target) + offset, sizeof(value));
+                return value;
+            };
+            LogF(L"weapon: watch raw %p %S byte %d redirect %d slot %d def %p %S state %p stand %.2f/%.2f fire add %.2f aimed %.2f kick %.2f/%.2f",
+                 rawDef, rawName ? rawName : "(null)", redirectByte, redirect, index, weaponDef, name, state,
+                 read(0x58C), read(0x598), read(0x5A8), read(0x764), read(0x72C), read(0x770));
+        }
+    }
 }
 
 void weapon::Update(const ModSettings& settings)

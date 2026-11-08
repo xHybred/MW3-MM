@@ -104,7 +104,7 @@ apply without a restart.
 | `[Sway] Enabled` | 1 scales how far the gun drifts while aiming and moving, 0 leaves it untouched |
 | `[Sway] Strength` | 0..1, how far the gun drifts. 1 = stock, 0 = no drift |
 | `[Flash] Enabled` | 1 leaves the muzzle flash and its smoke puff, 0 removes both |
-| `[Spread] Accuracy` | 0..1, how much of the hipfire cone is removed. 1 = every bullet through the crosshair |
+| `[Spread] Accuracy` | 0..1, how much of the cone is removed, hipfire and aimed. 1 = every bullet through the crosshair |
 | `[Spread] Bloom` | 0..1, how much of the per-shot cone growth is removed. 1 = sustained fire stays as tight as the first shot |
 | `[Viewmodel] Enabled` | 1 applies the three offsets below, 0 leaves the gun where the game puts it |
 | `[Viewmodel] XOffset` | -1.5..3, pulls the gun in (negative) for the oversized side pose, pushes it out (positive) |
@@ -175,7 +175,7 @@ Weapon recoil and hipfire spread are per weapon data, not dvars. The engine keep
 per weapon: the `WeaponDef` the game hands the renderer, and a per-slot copy that gameplay reads
 for spread and kick. They are often the same address, but not in every mission, so the runtime
 writes both whenever they differ. It scales the four kick amplitudes (ADS and hipfire pitch and
-yaw) and the six hipfire spread limits plus the per-shot bloom. Accel, speed and decay stay
+yaw), the six hipfire spread limits, the aimed cone and the per-shot bloom. Accel, speed and decay stay
 untouched, so the gun keeps its firing rhythm and only travels less far. Values are recorded per
 object the first time it is seen, so switching or picking a weapon up never compounds the
 scaling.
@@ -207,7 +207,10 @@ per-shot `hipSpreadFireAdd` that widens it while firing. The engine reads those 
 works out the cone, so the runtime scales them in place: the Accuracy slider scales the six stance
 values, and with the max at zero the cone cannot grow either; the Bloom slider scales only the
 per-shot add, so the first shot keeps the weapon's own resting accuracy and later shots stop widening
-it. Aiming is untouched; the aim-down-sights cone is a different field (`adsSpread`).
+it. Aiming has its own field too: `adsSpread` (a float at +0x764 in the weapon definition) is a single
+fixed cone the bullet is randomised inside while aimed, not a spread that grows with fire, which is why
+waiting for the gun to settle never tightened it. The Accuracy slider scales that field with the same
+values, so aimed shots land on the sight.
 
 The viewmodel cannot have its own field of view. A probe on the D3D9 device showed the game never
 calls `SetTransform(D3DTS_PROJECTION)` and draws the first-person model with the same projection as

@@ -205,8 +205,8 @@
                     <Border Grid.Column="0" Style="{StaticResource Card}" VerticalAlignment="Top">
                         <Grid x:Name="SpreadPanel">
                             <StackPanel>
-                                <TextBlock Text="Hipfire accuracy" Style="{StaticResource Section}" />
-                                <TextBlock Text="The cone your shots can land in when you fire without aiming."
+                                <TextBlock Text="Accuracy" Style="{StaticResource Section}" />
+                                <TextBlock Text="The cone your shots can land in, hipfire and aimed."
                                            Style="{StaticResource Subtext}" Margin="0,3,0,0" />
 
                                 <Grid Margin="0,18,0,0">
