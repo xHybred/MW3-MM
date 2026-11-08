@@ -2,560 +2,599 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="MW3 Mod Manager"
-        Width="820" Height="1390" MinWidth="700" MinHeight="600"
+        Width="1000" Height="800" MinWidth="880" MinHeight="620"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource Bg}"
         FontFamily="Segoe UI"
         UseLayoutRounding="True">
 
+    <Window.Resources>
+        <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource Muted}" />
+            <Setter Property="Padding" Value="14,7" />
+            <Setter Property="Margin" Value="0,0,4,0" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style x:Key="EndLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{StaticResource Muted}" />
+        </Style>
+    </Window.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0">
-            <StackPanel Margin="24,22,24,14">
+        <Grid Margin="24,18,24,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-                <StackPanel Margin="0,0,0,18">
-                    <TextBlock Style="{StaticResource Kicker}" Text="CALL OF DUTY: MODERN WARFARE 3" />
-                    <TextBlock Style="{StaticResource Title}" Text="Mod Manager" Margin="0,3,0,0" />
+            <StackPanel>
+                <TextBlock Style="{StaticResource Kicker}" Text="CALL OF DUTY: MODERN WARFARE 3" />
+                <TextBlock Style="{StaticResource Title}" Text="Mod Manager" Margin="0,2,0,0" FontSize="22" />
+                <TextBlock x:Name="GamePathText" Text="Looking for a Steam install..."
+                           Style="{StaticResource Subtext}" Margin="0,4,0,0"
+                           TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Button Content="Change..." Click="Browse_Click" HorizontalAlignment="Right" />
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <Ellipse x:Name="GameDot" Width="7" Height="7" Fill="{StaticResource Dim}"
+                             VerticalAlignment="Center" />
+                    <TextBlock x:Name="GameStateText" Text="Not detected"
+                               Style="{StaticResource Subtext}" Margin="6,0,14,0" />
+                    <Ellipse x:Name="RuntimeDot" Width="7" Height="7" Fill="{StaticResource Dim}"
+                             VerticalAlignment="Center" />
+                    <TextBlock x:Name="RuntimeStateText" Text="Runtime not installed"
+                               Style="{StaticResource Subtext}" Margin="6,0,0,0" />
                 </StackPanel>
+            </StackPanel>
+        </Grid>
 
-                <Border Style="{StaticResource Card}">
-                    <StackPanel>
-                        <DockPanel>
-                            <Button DockPanel.Dock="Right" Content="Change..." Click="Browse_Click"
-                                    VerticalAlignment="Top" Margin="12,0,0,0" />
-                            <StackPanel>
-                                <TextBlock Text="Game folder" Style="{StaticResource Section}" />
-                                <TextBlock x:Name="GamePathText" Text="Looking for a Steam install..."
-                                           Style="{StaticResource Subtext}" Margin="0,3,0,0"
-                                           TextTrimming="CharacterEllipsis" />
-                            </StackPanel>
-                        </DockPanel>
+        <Border Grid.Row="1" Background="{StaticResource CardBg}" CornerRadius="8"
+                Padding="6" Margin="24,0,24,12">
+            <StackPanel Orientation="Horizontal">
+                <Button x:Name="NavAim" Content="Aim" Style="{StaticResource NavButton}" Click="Nav_Click" />
+                <Button x:Name="NavWeapon" Content="Weapon" Style="{StaticResource NavButton}" Click="Nav_Click" />
+                <Button x:Name="NavViewmodel" Content="Viewmodel" Style="{StaticResource NavButton}" Click="Nav_Click" />
+                <Button x:Name="NavCrosshair" Content="Crosshair" Style="{StaticResource NavButton}" Click="Nav_Click" />
+                <Button x:Name="NavScreen" Content="Screen" Style="{StaticResource NavButton}" Click="Nav_Click" />
+                <Button x:Name="NavSetup" Content="Setup" Style="{StaticResource NavButton}" Click="Nav_Click" />
+            </StackPanel>
+        </Border>
 
-                        <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
-                            <Ellipse x:Name="GameDot" Width="7" Height="7" Fill="{StaticResource Dim}"
-                                     VerticalAlignment="Center" />
-                            <TextBlock x:Name="GameStateText" Text="Not detected"
-                                       Style="{StaticResource Subtext}" Margin="7,0,20,0" />
-                            <Ellipse x:Name="RuntimeDot" Width="7" Height="7" Fill="{StaticResource Dim}"
-                                     VerticalAlignment="Center" />
-                            <TextBlock x:Name="RuntimeStateText" Text="Runtime not installed"
-                                       Style="{StaticResource Subtext}" Margin="7,0,0,0" />
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
+        <Grid Grid.Row="2" Margin="24,0,24,0">
 
-                <Border Style="{StaticResource Card}">
-                    <Grid x:Name="FovPanel">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
+            <!-- Aim -->
+            <ScrollViewer x:Name="PageAim" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <Border Style="{StaticResource Card}">
+                        <Grid x:Name="FovPanel">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
 
-                        <DockPanel>
-                            <CheckBox x:Name="EnabledSwitch" DockPanel.Dock="Right" Content="Applied"
-                                      Style="{StaticResource Switch}" VerticalAlignment="Center"
-                                      Checked="Options_Changed" Unchecked="Options_Changed" />
-                            <StackPanel>
-                                <TextBlock Text="Field of view" Style="{StaticResource Section}" />
-                                <TextBlock Text="Campaign and Spec Ops, every launch."
-                                           Style="{StaticResource Subtext}" Margin="0,2,0,0" />
-                            </StackPanel>
-                        </DockPanel>
-
-                        <Grid Grid.Row="1" Margin="0,18,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <Slider x:Name="FovSlider" Minimum="60" Maximum="130"
-                                    TickFrequency="1" IsSnapToTickEnabled="True"
-                                    Style="{StaticResource Slider}" VerticalAlignment="Center"
-                                    ValueChanged="FovSlider_ValueChanged" />
-                            <TextBlock x:Name="FovValueText" Grid.Column="1" Text="90&#176;"
-                                       Style="{StaticResource Value}" MinWidth="76"
-                                       VerticalAlignment="Center" />
-                        </Grid>
-
-                        <DockPanel Grid.Row="2" Margin="0,2,0,0">
-                            <TextBlock DockPanel.Dock="Right" Text="130" Style="{StaticResource Subtext}" />
-                            <TextBlock Text="60" Style="{StaticResource Subtext}" />
-                        </DockPanel>
-
-                        <CheckBox x:Name="AffectedSwitch" Grid.Row="3" Margin="0,14,0,0"
-                                  Content="Scale aiming FOV with your FOV"
-                                  Style="{StaticResource Switch}"
-                                  Checked="Options_Changed" Unchecked="Options_Changed" />
-
-                        <TextBlock x:Name="AdsHint" Grid.Row="4" Margin="0,6,0,0"
-                                   Style="{StaticResource Subtext}" />
-
-                        <StackPanel Grid.Row="5" Margin="0,18,0,0">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Aiming zoom" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
-                                <TextBlock x:Name="AimValueText" Grid.Column="1" Text="110%"
-                                           Style="{StaticResource Value}" MinWidth="76" />
-                            </Grid>
-                            <Slider x:Name="AimSlider" Minimum="100" Maximum="135"
-                                    TickFrequency="1" IsSnapToTickEnabled="True"
-                                    Style="{StaticResource Slider}" VerticalAlignment="Center"
-                                    Margin="0,8,0,0" ValueChanged="AimSlider_ValueChanged" />
-                            <DockPanel Margin="0,2,0,0">
-                                <TextBlock DockPanel.Dock="Right" Text="135%" Style="{StaticResource Subtext}" />
-                                <TextBlock Text="100%" Style="{StaticResource Subtext}" />
+                            <DockPanel>
+                                <CheckBox x:Name="EnabledSwitch" DockPanel.Dock="Right" Content="On"
+                                          Style="{StaticResource Switch}" VerticalAlignment="Center"
+                                          Checked="Options_Changed" Unchecked="Options_Changed" />
+                                <StackPanel>
+                                    <TextBlock Text="Field of view" Style="{StaticResource Section}" />
+                                    <TextBlock Text="Overrides the game's 65 degree hipfire view."
+                                               Style="{StaticResource Subtext}" Margin="0,3,0,0" />
+                                </StackPanel>
                             </DockPanel>
-                            <CheckBox x:Name="FlatSwitch" Margin="0,14,0,0"
-                                      Content="Same zoom on every weapon"
-                                      Style="{StaticResource Switch}"
-                                      Checked="Options_Changed" Unchecked="Options_Changed" />
-                            <TextBlock x:Name="AimHint" Margin="0,6,0,0" Style="{StaticResource Subtext}" />
-                        </StackPanel>
 
-                        <Border Grid.Row="6" Background="#121517" CornerRadius="6" Padding="14,11" Margin="0,16,0,0">
-                            <Grid>
+                            <Grid Grid.Row="1" Margin="0,18,0,0">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Text="Hipfire" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
-                                <TextBlock x:Name="HipText" Grid.Column="1" Text="90.0&#176;" Margin="10,0,0,0"
-                                           FontWeight="SemiBold" VerticalAlignment="Center" />
-                                <TextBlock Text="Aiming" Grid.Column="2" Style="{StaticResource Subtext}"
-                                           VerticalAlignment="Center" Margin="16,0,0,0" />
-                                <TextBlock x:Name="AdsText" Grid.Column="3" Text="55.4&#176;" Margin="10,0,0,0"
-                                           FontWeight="SemiBold" VerticalAlignment="Center" />
-                            </Grid>
-                        </Border>
-                    </Grid>
-                </Border>
-
-                <Border Style="{StaticResource Card}">
-                    <Grid x:Name="FlinchPanel">
-                        <StackPanel>
-                            <DockPanel>
-                                <StackPanel>
-                                    <TextBlock Text="Damage feedback" Style="{StaticResource Section}" />
-                                    <TextBlock Text="What the screen does when you take a hit."
-                                               Style="{StaticResource Subtext}" Margin="0,2,0,0" />
-                                </StackPanel>
-                            </DockPanel>
-
-                            <DockPanel Margin="0,18,0,0">
-                                <CheckBox x:Name="FlinchSwitch" DockPanel.Dock="Right" Content="Applied"
-                                          Style="{StaticResource Switch}" VerticalAlignment="Center"
-                                          Checked="Flinch_Changed" Unchecked="Flinch_Changed" />
-                                <TextBlock Text="View kick" Style="{StaticResource Subtext}"
+                                <TextBlock x:Name="FovValueText" Grid.Column="1" Text="90&#176;"
+                                           Style="{StaticResource Value}" MinWidth="76"
                                            VerticalAlignment="Center" />
-                            </DockPanel>
-
-                            <Grid Margin="0,10,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Strength" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
-                                <TextBlock x:Name="FlinchValueText" Grid.Column="1" Text="100%"
-                                           Style="{StaticResource Value}" MinWidth="76" />
-                            </Grid>
-                            <Slider x:Name="FlinchSlider" Minimum="0" Maximum="100"
-                                    TickFrequency="5" IsSnapToTickEnabled="True"
-                                    Style="{StaticResource Slider}" VerticalAlignment="Center"
-                                    ValueChanged="FlinchSlider_ValueChanged" />
-                            <DockPanel Margin="0,2,0,0">
-                                <TextBlock DockPanel.Dock="Right" Text="100%" Style="{StaticResource Subtext}" />
-                                <TextBlock Text="0%" Style="{StaticResource Subtext}" />
-                            </DockPanel>
-
-                            <TextBlock x:Name="FlinchHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
-
-                            <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,16,0,14" />
-
-                            <DockPanel>
-                                <CheckBox x:Name="BlurSwitch" DockPanel.Dock="Right" Content="Applied"
-                                          Style="{StaticResource Switch}" VerticalAlignment="Center"
-                                          Checked="Blur_Changed" Unchecked="Blur_Changed" />
-                                <StackPanel>
-                                    <TextBlock Text="Screen blur" Style="{StaticResource Subtext}" />
-                                    <TextBlock Text="The wash that covers the screen when a shot lands."
-                                               Style="{StaticResource Subtext}" Opacity="0.7" Margin="0,2,0,0" />
-                                </StackPanel>
-                            </DockPanel>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
-                <Border Style="{StaticResource Card}">
-                    <Grid x:Name="SpreadPanel">
-                        <StackPanel>
-                            <DockPanel>
-                                <CheckBox x:Name="SpreadSwitch" DockPanel.Dock="Right" Content="Applied"
-                                          Style="{StaticResource Switch}" VerticalAlignment="Center"
-                                          Checked="Spread_Changed" Unchecked="Spread_Changed" />
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Hipfire" Style="{StaticResource Section}" />
-                                    <TextBlock Text="How wide the cone of fire is when you fire from the hip."
-                                               Style="{StaticResource Subtext}" Opacity="0.7" Margin="0,2,0,0" />
-                                </StackPanel>
-                            </DockPanel>
-
-                            <Grid Margin="0,14,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Accuracy" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
-                                <TextBlock x:Name="SpreadValueText" Grid.Column="1" Text="0%"
-                                           Style="{StaticResource Value}" MinWidth="76" />
                             </Grid>
 
-                            <Slider x:Name="SpreadSlider" Minimum="0" Maximum="100"
-                                    TickFrequency="5" IsSnapToTickEnabled="True"
-                                    Style="{StaticResource Slider}" VerticalAlignment="Center"
-                                    ValueChanged="SpreadSlider_ValueChanged" />
-                            <DockPanel Margin="0,2,0,0">
-                                <TextBlock DockPanel.Dock="Right" Text="100%" Style="{StaticResource Subtext}" />
-                                <TextBlock Text="0%" Style="{StaticResource Subtext}" />
-                            </DockPanel>
-                            <TextBlock x:Name="SpreadHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
-
-                            <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,14,0,0" />
-
-                            <Grid Margin="0,14,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="No bloom" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
-                                <TextBlock x:Name="BloomValueText" Grid.Column="1" Text="0%"
-                                           Style="{StaticResource Value}" MinWidth="76" />
-                            </Grid>
-
-                            <Slider x:Name="BloomSlider" Minimum="0" Maximum="100"
-                                    TickFrequency="5" IsSnapToTickEnabled="True"
-                                    Style="{StaticResource Slider}" VerticalAlignment="Center"
-                                    ValueChanged="BloomSlider_ValueChanged" />
-                            <DockPanel Margin="0,2,0,0">
-                                <TextBlock DockPanel.Dock="Right" Text="100%" Style="{StaticResource Subtext}" />
-                                <TextBlock Text="0%" Style="{StaticResource Subtext}" />
-                            </DockPanel>
-                            <TextBlock x:Name="BloomHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
-                <Border Style="{StaticResource Card}">
-                    <Grid x:Name="CrosshairPanel">
-                        <StackPanel>
-                            <DockPanel>
-                                <CheckBox x:Name="CrosshairSwitch" DockPanel.Dock="Right" Content="Applied"
-                                          Style="{StaticResource Switch}" VerticalAlignment="Center"
-                                          Checked="Crosshair_Changed" Unchecked="Crosshair_Changed" />
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Crosshair" Style="{StaticResource Section}" />
-                                    <TextBlock Text="What you aim with when you are not looking down the sights."
-                                               Style="{StaticResource Subtext}" Opacity="0.7" Margin="0,2,0,0" />
-                                </StackPanel>
-                            </DockPanel>
-
-                            <Grid Margin="0,14,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Style" Style="{StaticResource Subtext}" VerticalAlignment="Center"
-                                           Margin="0,0,10,0" />
-                                <Button x:Name="StyleGameButton" Grid.Column="1" Content="Game" Margin="0,0,6,0"
-                                        Padding="10,5" Click="CrosshairStyle_Click" />
-                                <Button x:Name="StyleSharpButton" Grid.Column="2" Content="Sharp" Margin="0,0,6,0"
-                                        Padding="10,5" Click="CrosshairStyle_Click" />
-                                <Button x:Name="StyleHaloButton" Grid.Column="3" Content="Halo"
-                                        Padding="10,5" Click="CrosshairStyle_Click" />
-                            </Grid>
-                            <TextBlock x:Name="CrosshairStyleHint" Margin="0,8,0,0" Style="{StaticResource Subtext}" />
-
-                            <Grid Margin="0,14,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Size" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
-                                <TextBlock x:Name="CrosshairSizeValueText" Grid.Column="1" Text="100%"
-                                           Style="{StaticResource Value}" MinWidth="76" />
-                            </Grid>
-
-                            <Slider x:Name="CrosshairSizeSlider" Minimum="50" Maximum="200"
-                                    TickFrequency="5" IsSnapToTickEnabled="True"
-                                    Style="{StaticResource Slider}" VerticalAlignment="Center"
-                                    ValueChanged="CrosshairSizeSlider_ValueChanged" />
-                            <DockPanel Margin="0,2,0,0">
-                                <TextBlock DockPanel.Dock="Right" Text="200%" Style="{StaticResource Subtext}" />
-                                <TextBlock Text="50%" Style="{StaticResource Subtext}" />
-                            </DockPanel>
-                            <TextBlock x:Name="CrosshairSizeHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
-
-                            <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,14,0,0" />
-
-                            <Grid Margin="0,14,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Opacity" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
-                                <TextBlock x:Name="CrosshairOpacityValueText" Grid.Column="1" Text="100%"
-                                           Style="{StaticResource Value}" MinWidth="76" />
-                            </Grid>
-
-                            <Slider x:Name="CrosshairOpacitySlider" Minimum="0" Maximum="100"
-                                    TickFrequency="5" IsSnapToTickEnabled="True"
-                                    Style="{StaticResource Slider}" VerticalAlignment="Center"
-                                    ValueChanged="CrosshairOpacitySlider_ValueChanged" />
-                            <DockPanel Margin="0,2,0,0">
-                                <TextBlock DockPanel.Dock="Right" Text="100%" Style="{StaticResource Subtext}" />
-                                <TextBlock Text="0%" Style="{StaticResource Subtext}" />
-                            </DockPanel>
-
-                            <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,14,0,0" />
-
-                            <DockPanel Margin="0,14,0,0">
-                                <CheckBox x:Name="CrosshairShowSwitch" DockPanel.Dock="Right" Content="Shown"
-                                          Style="{StaticResource Switch}" VerticalAlignment="Center"
-                                          Checked="CrosshairShow_Changed" Unchecked="CrosshairShow_Changed" />
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Show crosshair" Style="{StaticResource Subtext}" />
-                                    <TextBlock Text="Turn it off for a clean screen." Style="{StaticResource Subtext}"
-                                               Opacity="0.7" Margin="0,2,0,0" />
-                                </StackPanel>
-                            </DockPanel>
-
-                            <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,14,0,0" />
-
-                            <DockPanel Margin="0,14,0,0">
-                                <CheckBox x:Name="CrosshairDynamicSwitch" DockPanel.Dock="Right" Content="Dynamic"
-                                          Style="{StaticResource Switch}" VerticalAlignment="Center"
-                                          Checked="CrosshairDynamic_Changed" Unchecked="CrosshairDynamic_Changed" />
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Dynamic" Style="{StaticResource Subtext}" />
-                                    <TextBlock Text="The crosshair opens up as your spread grows." Style="{StaticResource Subtext}"
-                                               Opacity="0.7" Margin="0,2,0,0" />
-                                </StackPanel>
-                            </DockPanel>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
-                <Border Style="{StaticResource Card}">
-                    <Grid x:Name="RecoilPanel">
-                        <StackPanel>
-                            <DockPanel>
-                                <StackPanel>
-                                    <TextBlock Text="Weapon feel" Style="{StaticResource Section}" />
-                                    <TextBlock Text="How far the gun itself kicks when you fire. The camera keeps its own recoil."
-                                               Style="{StaticResource Subtext}" Margin="0,2,0,0" />
-                                </StackPanel>
-                            </DockPanel>
-
-                            <DockPanel Margin="0,18,0,0">
-                                <CheckBox x:Name="RecoilSwitch" DockPanel.Dock="Right" Content="Applied"
-                                          Style="{StaticResource Switch}" VerticalAlignment="Center"
-                                          Checked="Recoil_Changed" Unchecked="Recoil_Changed" />
-                                <TextBlock Text="Visual recoil" Style="{StaticResource Subtext}"
-                                           VerticalAlignment="Center" />
-                            </DockPanel>
-
-                            <Grid Margin="0,10,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Strength" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
-                                <TextBlock x:Name="RecoilValueText" Grid.Column="1" Text="100%"
-                                           Style="{StaticResource Value}" MinWidth="76" />
-                            </Grid>
-                            <Slider x:Name="RecoilSlider" Minimum="0" Maximum="100"
-                                    TickFrequency="5" IsSnapToTickEnabled="True"
-                                    Style="{StaticResource Slider}" VerticalAlignment="Center"
-                                    ValueChanged="RecoilSlider_ValueChanged" />
-                            <DockPanel Margin="0,2,0,0">
-                                <TextBlock DockPanel.Dock="Right" Text="100%" Style="{StaticResource Subtext}" />
-                                <TextBlock Text="0%" Style="{StaticResource Subtext}" />
-                            </DockPanel>
-
-                            <TextBlock x:Name="RecoilHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
-
-                            <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,16,0,14" />
-
-                            <DockPanel>
-                                <CheckBox x:Name="SwaySwitch" DockPanel.Dock="Right" Content="Applied"
-                                          Style="{StaticResource Switch}" VerticalAlignment="Center"
-                                          Checked="Sway_Changed" Unchecked="Sway_Changed" />
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Weapon sway" Style="{StaticResource Subtext}" />
-                                    <TextBlock Text="How far the gun drifts while you aim and move."
-                                               Style="{StaticResource Subtext}" Opacity="0.7" />
-                                </StackPanel>
-                            </DockPanel>
-
-                            <Grid Margin="0,10,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Strength" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
-                                <TextBlock x:Name="SwayValueText" Grid.Column="1" Text="100%"
-                                           Style="{StaticResource Value}" MinWidth="76" />
-                            </Grid>
-                            <Slider x:Name="SwaySlider" Minimum="0" Maximum="100"
+                            <Slider x:Name="FovSlider" Grid.Row="2" Minimum="60" Maximum="130"
                                     TickFrequency="1" IsSnapToTickEnabled="True"
                                     Style="{StaticResource Slider}" VerticalAlignment="Center"
-                                    ValueChanged="SwaySlider_ValueChanged" />
-                            <DockPanel Margin="0,2,0,0">
-                                <TextBlock DockPanel.Dock="Right" Text="100%" Style="{StaticResource Subtext}" />
-                                <TextBlock Text="0%" Style="{StaticResource Subtext}" />
+                                    Margin="0,8,0,0" ValueChanged="FovSlider_ValueChanged" />
+                            <DockPanel Grid.Row="3" Margin="0,2,0,0">
+                                <TextBlock DockPanel.Dock="Right" Text="130" Style="{StaticResource EndLabel}" />
+                                <TextBlock Text="60" Style="{StaticResource EndLabel}" />
                             </DockPanel>
 
-                            <TextBlock x:Name="SwayHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
+                            <CheckBox x:Name="AffectedSwitch" Grid.Row="4" Margin="0,16,0,0"
+                                      Content="Scale aiming FOV with your FOV"
+                                      Style="{StaticResource Switch}"
+                                      Checked="Options_Changed" Unchecked="Options_Changed" />
 
-                            <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,16,0,14" />
+                            <TextBlock x:Name="AdsHint" Grid.Row="5" Margin="0,6,0,0"
+                                       Style="{StaticResource Subtext}" />
 
-                            <DockPanel>
-                                <CheckBox x:Name="FlashSwitch" DockPanel.Dock="Right" Content="Applied"
-                                          Style="{StaticResource Switch}" VerticalAlignment="Center"
-                                          Checked="Flash_Changed" Unchecked="Flash_Changed" />
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Muzzle flash" Style="{StaticResource Subtext}" />
-                                    <TextBlock Text="The flash and the smoke puff when you fire."
-                                               Style="{StaticResource Subtext}" Opacity="0.7" />
-                                </StackPanel>
-                            </DockPanel>
+                            <Border Grid.Row="6" Height="1" Background="{StaticResource CardBorder}"
+                                    Margin="0,16,0,0" />
 
-                            <TextBlock x:Name="FlashHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
+                            <StackPanel Grid.Row="7" Margin="0,16,0,0">
+                                <DockPanel>
+                                    <TextBlock Text="Aiming zoom" Style="{StaticResource Subtext}"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock x:Name="AimValueText" DockPanel.Dock="Right" Text="110%"
+                                               Style="{StaticResource Value}" MinWidth="76" />
+                                </DockPanel>
+                                <Slider x:Name="AimSlider" Minimum="100" Maximum="135"
+                                        TickFrequency="1" IsSnapToTickEnabled="True"
+                                        Style="{StaticResource Slider}" VerticalAlignment="Center"
+                                        Margin="0,8,0,0" ValueChanged="AimSlider_ValueChanged" />
+                                <DockPanel Margin="0,2,0,0">
+                                    <TextBlock DockPanel.Dock="Right" Text="135%" Style="{StaticResource EndLabel}" />
+                                    <TextBlock Text="100% = stock" Style="{StaticResource EndLabel}" />
+                                </DockPanel>
+                                <CheckBox x:Name="FlatSwitch" Margin="0,16,0,0"
+                                          Content="Same zoom on every weapon"
+                                          Style="{StaticResource Switch}"
+                                          Checked="Options_Changed" Unchecked="Options_Changed" />
+                                <TextBlock x:Name="AimHint" Margin="0,6,0,0" Style="{StaticResource Subtext}" />
 
-                            <DockPanel Margin="0,16,0,0">
-                                <CheckBox x:Name="ViewmodelSwitch" DockPanel.Dock="Right" Content="Applied"
-                                          Style="{StaticResource Switch}" VerticalAlignment="Center"
-                                          Checked="Viewmodel_Changed" Unchecked="Viewmodel_Changed" />
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Viewmodel offsets" Style="{StaticResource Subtext}" />
-                                    <TextBlock Text="Shift the gun sideways and vertically without moving the camera."
-                                               Style="{StaticResource Subtext}" Opacity="0.7" />
-                                </StackPanel>
-                            </DockPanel>
+                                <Border Background="#121517" CornerRadius="6" Padding="14,11" Margin="0,16,0,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Hipfire" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
+                                        <TextBlock x:Name="HipText" Grid.Column="1" Text="90.0&#176;" Margin="10,0,0,0"
+                                                   FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        <TextBlock Text="Aiming" Grid.Column="3" Style="{StaticResource Subtext}"
+                                                   VerticalAlignment="Center" Margin="16,0,0,0" />
+                                        <TextBlock x:Name="AdsText" Grid.Column="4" Text="55.4&#176;" Margin="10,0,0,0"
+                                                   FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
 
-                            <Grid Margin="0,10,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Viewmodel X Offset" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
-                                <TextBlock x:Name="ViewmodelXValueText" Grid.Column="1" Text="0.0"
-                                           Style="{StaticResource Value}" MinWidth="76" />
-                            </Grid>
+            <!-- Weapon -->
+            <ScrollViewer x:Name="PageWeapon" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="14" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
 
-                            <Slider x:Name="ViewmodelXSlider" Minimum="-1.5" Maximum="3"
-                                    TickFrequency="0.1" IsSnapToTickEnabled="True"
-                                    Style="{StaticResource Slider}" VerticalAlignment="Center"
-                                    ValueChanged="ViewmodelXSlider_ValueChanged" />
-                            <DockPanel Margin="0,2,0,0">
-                                <TextBlock DockPanel.Dock="Right" Text="3.0 out" Style="{StaticResource Subtext}" />
-                                <TextBlock Text="1.5 in" Style="{StaticResource Subtext}" />
-                            </DockPanel>
+                    <Border Grid.Column="0" Style="{StaticResource Card}" VerticalAlignment="Top">
+                        <Grid x:Name="SpreadPanel">
+                            <StackPanel>
+                                <TextBlock Text="Hipfire accuracy" Style="{StaticResource Section}" />
+                                <TextBlock Text="The cone your shots can land in when you fire without aiming."
+                                           Style="{StaticResource Subtext}" Margin="0,3,0,0" />
 
-                            <Grid Margin="0,10,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Viewmodel Z Offset" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
-                                <TextBlock x:Name="ViewmodelZValueText" Grid.Column="1" Text="0.0"
-                                           Style="{StaticResource Value}" MinWidth="76" />
-                            </Grid>
+                                <Grid Margin="0,18,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Cone size" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="SpreadValueText" Grid.Column="1" Text="0%"
+                                               Style="{StaticResource Value}" MinWidth="76" />
+                                </Grid>
+                                <Slider x:Name="SpreadSlider" Minimum="0" Maximum="100"
+                                        TickFrequency="5" IsSnapToTickEnabled="True"
+                                        Style="{StaticResource Slider}" VerticalAlignment="Center"
+                                        ValueChanged="SpreadSlider_ValueChanged" />
+                                <DockPanel Margin="0,2,0,0">
+                                    <TextBlock DockPanel.Dock="Right" Text="Every shot centred" Style="{StaticResource EndLabel}" />
+                                    <TextBlock Text="Stock" Style="{StaticResource EndLabel}" />
+                                </DockPanel>
+                                <TextBlock x:Name="SpreadHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
 
-                            <Slider x:Name="ViewmodelZSlider" Minimum="-3" Maximum="3"
-                                    TickFrequency="0.1" IsSnapToTickEnabled="True"
-                                    Style="{StaticResource Slider}" VerticalAlignment="Center"
-                                    ValueChanged="ViewmodelZSlider_ValueChanged" />
-                            <DockPanel Margin="0,2,0,0">
-                                <TextBlock DockPanel.Dock="Right" Text="3.0 right" Style="{StaticResource Subtext}" />
-                                <TextBlock Text="3.0 left" Style="{StaticResource Subtext}" />
-                            </DockPanel>
+                                <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,16,0,0" />
 
-                            <Grid Margin="0,10,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Viewmodel Y Offset" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
-                                <TextBlock x:Name="ViewmodelYValueText" Grid.Column="1" Text="0.0"
-                                           Style="{StaticResource Value}" MinWidth="76" />
-                            </Grid>
+                                <Grid Margin="0,16,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Bloom while firing" Style="{StaticResource Subtext}"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock x:Name="BloomValueText" Grid.Column="1" Text="0%"
+                                               Style="{StaticResource Value}" MinWidth="76" />
+                                </Grid>
+                                <Slider x:Name="BloomSlider" Minimum="0" Maximum="100"
+                                        TickFrequency="5" IsSnapToTickEnabled="True"
+                                        Style="{StaticResource Slider}" VerticalAlignment="Center"
+                                        ValueChanged="BloomSlider_ValueChanged" />
+                                <DockPanel Margin="0,2,0,0">
+                                    <TextBlock DockPanel.Dock="Right" Text="Never widens" Style="{StaticResource EndLabel}" />
+                                    <TextBlock Text="Stock" Style="{StaticResource EndLabel}" />
+                                </DockPanel>
+                                <TextBlock x:Name="BloomHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
 
-                            <Slider x:Name="ViewmodelYSlider" Minimum="-3" Maximum="3"
-                                    TickFrequency="0.1" IsSnapToTickEnabled="True"
-                                    Style="{StaticResource Slider}" VerticalAlignment="Center"
-                                    ValueChanged="ViewmodelYSlider_ValueChanged" />
-                            <DockPanel Margin="0,2,0,0">
-                                <TextBlock DockPanel.Dock="Right" Text="3.0 up" Style="{StaticResource Subtext}" />
-                                <TextBlock Text="3.0 down" Style="{StaticResource Subtext}" />
-                            </DockPanel>
+                    <Border Grid.Column="2" Style="{StaticResource Card}" VerticalAlignment="Top">
+                        <Grid x:Name="RecoilPanel">
+                            <StackPanel>
+                                <TextBlock Text="Weapon feel" Style="{StaticResource Section}" />
+                                <TextBlock Text="How the gun itself moves. The camera keeps its own recoil."
+                                           Style="{StaticResource Subtext}" Margin="0,3,0,0" />
 
-                            <TextBlock x:Name="ViewmodelHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
-                        </StackPanel>
-                    </Grid>
-                </Border>
+                                <Grid Margin="0,18,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Visual recoil" Style="{StaticResource Subtext}"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock x:Name="RecoilValueText" Grid.Column="1" Text="100%"
+                                               Style="{StaticResource Value}" MinWidth="76" />
+                                </Grid>
+                                <Slider x:Name="RecoilSlider" Minimum="0" Maximum="100"
+                                        TickFrequency="5" IsSnapToTickEnabled="True"
+                                        Style="{StaticResource Slider}" VerticalAlignment="Center"
+                                        ValueChanged="RecoilSlider_ValueChanged" />
+                                <DockPanel Margin="0,2,0,0">
+                                    <TextBlock DockPanel.Dock="Right" Text="Stock" Style="{StaticResource EndLabel}" />
+                                    <TextBlock Text="No kick" Style="{StaticResource EndLabel}" />
+                                </DockPanel>
+                                <TextBlock x:Name="RecoilHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
 
-                <Border Style="{StaticResource Card}">
-                    <StackPanel>
+                                <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,16,0,0" />
+
+                                <Grid Margin="0,16,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Weapon sway" Style="{StaticResource Subtext}"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock x:Name="SwayValueText" Grid.Column="1" Text="100%"
+                                               Style="{StaticResource Value}" MinWidth="76" />
+                                </Grid>
+                                <Slider x:Name="SwaySlider" Minimum="0" Maximum="100"
+                                        TickFrequency="1" IsSnapToTickEnabled="True"
+                                        Style="{StaticResource Slider}" VerticalAlignment="Center"
+                                        ValueChanged="SwaySlider_ValueChanged" />
+                                <DockPanel Margin="0,2,0,0">
+                                    <TextBlock DockPanel.Dock="Right" Text="Stock" Style="{StaticResource EndLabel}" />
+                                    <TextBlock Text="No drift" Style="{StaticResource EndLabel}" />
+                                </DockPanel>
+                                <TextBlock x:Name="SwayHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
+
+                                <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,16,0,0" />
+
+                                <DockPanel Margin="0,16,0,0">
+                                    <CheckBox x:Name="FlashSwitch" DockPanel.Dock="Right" Content="On"
+                                              Style="{StaticResource Switch}" VerticalAlignment="Center"
+                                              Checked="Flash_Changed" Unchecked="Flash_Changed" />
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Hide muzzle flash" Style="{StaticResource Subtext}" />
+                                        <TextBlock Text="The flash and the smoke puff when you fire."
+                                                   Style="{StaticResource Subtext}" Opacity="0.7" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                </DockPanel>
+                                <TextBlock x:Name="FlashHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </ScrollViewer>
+
+            <!-- Viewmodel -->
+            <ScrollViewer x:Name="PageViewmodel" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                <StackPanel>
+                    <Border Style="{StaticResource Card}">
+                        <Grid x:Name="ViewmodelPanel">
+                            <StackPanel>
+                                <TextBlock Text="Viewmodel offsets" Style="{StaticResource Section}" />
+                                <TextBlock Text="Moves the gun without moving the camera. All zero is stock."
+                                           Style="{StaticResource Subtext}" Margin="0,3,0,0" />
+
+                                <DockPanel Margin="0,14,0,0">
+                                    <CheckBox x:Name="ViewmodelSwitch" DockPanel.Dock="Right" Content="On"
+                                              Style="{StaticResource Switch}" VerticalAlignment="Center"
+                                              Checked="Viewmodel_Changed" Unchecked="Viewmodel_Changed" />
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Apply offsets" Style="{StaticResource Subtext}" />
+                                        <TextBlock Text="Off keeps your values and puts the gun back."
+                                                   Style="{StaticResource Subtext}" Opacity="0.7" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                </DockPanel>
+
+                                <Grid Margin="0,18,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Depth" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="ViewmodelXValueText" Grid.Column="1" Text="0.0"
+                                               Style="{StaticResource Value}" MinWidth="76" />
+                                </Grid>
+                                <Slider x:Name="ViewmodelXSlider" Minimum="-1.5" Maximum="3"
+                                        TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                        Style="{StaticResource Slider}" VerticalAlignment="Center"
+                                        ValueChanged="ViewmodelXSlider_ValueChanged" />
+                                <DockPanel Margin="0,2,0,0">
+                                    <TextBlock DockPanel.Dock="Right" Text="3.0 out" Style="{StaticResource EndLabel}" />
+                                    <TextBlock Text="1.5 in" Style="{StaticResource EndLabel}" />
+                                </DockPanel>
+
+                                <Grid Margin="0,16,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Side to side" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="ViewmodelZValueText" Grid.Column="1" Text="0.0"
+                                               Style="{StaticResource Value}" MinWidth="76" />
+                                </Grid>
+                                <Slider x:Name="ViewmodelZSlider" Minimum="-3" Maximum="3"
+                                        TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                        Style="{StaticResource Slider}" VerticalAlignment="Center"
+                                        ValueChanged="ViewmodelZSlider_ValueChanged" />
+                                <DockPanel Margin="0,2,0,0">
+                                    <TextBlock DockPanel.Dock="Right" Text="3.0 right" Style="{StaticResource EndLabel}" />
+                                    <TextBlock Text="3.0 left" Style="{StaticResource EndLabel}" />
+                                </DockPanel>
+
+                                <Grid Margin="0,16,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Up and down" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="ViewmodelYValueText" Grid.Column="1" Text="0.0"
+                                               Style="{StaticResource Value}" MinWidth="76" />
+                                </Grid>
+                                <Slider x:Name="ViewmodelYSlider" Minimum="-3" Maximum="3"
+                                        TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                        Style="{StaticResource Slider}" VerticalAlignment="Center"
+                                        ValueChanged="ViewmodelYSlider_ValueChanged" />
+                                <DockPanel Margin="0,2,0,0">
+                                    <TextBlock DockPanel.Dock="Right" Text="3.0 up" Style="{StaticResource EndLabel}" />
+                                    <TextBlock Text="3.0 down" Style="{StaticResource EndLabel}" />
+                                </DockPanel>
+
+                                <TextBlock x:Name="ViewmodelHint" Margin="0,12,0,0" Style="{StaticResource Subtext}" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Crosshair -->
+            <ScrollViewer x:Name="PageCrosshair" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                <StackPanel>
+                    <Border Style="{StaticResource Card}">
+                        <Grid x:Name="CrosshairPanel">
+                            <StackPanel>
+                                <DockPanel>
+                                    <CheckBox x:Name="CrosshairSwitch" DockPanel.Dock="Right" Content="On"
+                                              Style="{StaticResource Switch}" VerticalAlignment="Center"
+                                              Checked="Crosshair_Changed" Unchecked="Crosshair_Changed" />
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Crosshair" Style="{StaticResource Section}" />
+                                        <TextBlock Text="Size, opacity and the shape you aim with."
+                                                   Style="{StaticResource Subtext}" Opacity="0.7" Margin="0,3,0,0" />
+                                    </StackPanel>
+                                </DockPanel>
+
+                                <Grid Margin="0,18,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Style" Style="{StaticResource Subtext}" VerticalAlignment="Center"
+                                               Margin="0,0,10,0" />
+                                    <Button x:Name="StyleGameButton" Grid.Column="1" Content="Game" Margin="0,0,6,0"
+                                            Padding="10,5" Click="CrosshairStyle_Click" />
+                                    <Button x:Name="StyleSharpButton" Grid.Column="2" Content="Sharp" Margin="0,0,6,0"
+                                            Padding="10,5" Click="CrosshairStyle_Click" />
+                                    <Button x:Name="StyleHaloButton" Grid.Column="3" Content="Halo"
+                                            Padding="10,5" Click="CrosshairStyle_Click" />
+                                </Grid>
+                                <TextBlock x:Name="CrosshairStyleHint" Margin="0,8,0,0" Style="{StaticResource Subtext}" />
+
+                                <Grid Margin="0,16,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Size" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="CrosshairSizeValueText" Grid.Column="1" Text="100%"
+                                               Style="{StaticResource Value}" MinWidth="76" />
+                                </Grid>
+                                <Slider x:Name="CrosshairSizeSlider" Minimum="50" Maximum="200"
+                                        TickFrequency="5" IsSnapToTickEnabled="True"
+                                        Style="{StaticResource Slider}" VerticalAlignment="Center"
+                                        ValueChanged="CrosshairSizeSlider_ValueChanged" />
+                                <DockPanel Margin="0,2,0,0">
+                                    <TextBlock DockPanel.Dock="Right" Text="200%" Style="{StaticResource EndLabel}" />
+                                    <TextBlock Text="50%" Style="{StaticResource EndLabel}" />
+                                </DockPanel>
+                                <TextBlock x:Name="CrosshairSizeHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
+
+                                <Grid Margin="0,16,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Opacity" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="CrosshairOpacityValueText" Grid.Column="1" Text="100%"
+                                               Style="{StaticResource Value}" MinWidth="76" />
+                                </Grid>
+                                <Slider x:Name="CrosshairOpacitySlider" Minimum="0" Maximum="100"
+                                        TickFrequency="5" IsSnapToTickEnabled="True"
+                                        Style="{StaticResource Slider}" VerticalAlignment="Center"
+                                        ValueChanged="CrosshairOpacitySlider_ValueChanged" />
+                                <DockPanel Margin="0,2,0,0">
+                                    <TextBlock DockPanel.Dock="Right" Text="Solid" Style="{StaticResource EndLabel}" />
+                                    <TextBlock Text="Invisible" Style="{StaticResource EndLabel}" />
+                                </DockPanel>
+
+                                <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,16,0,0" />
+
+                                <DockPanel Margin="0,16,0,0">
+                                    <CheckBox x:Name="CrosshairShowSwitch" DockPanel.Dock="Right" Content="On"
+                                              Style="{StaticResource Switch}" VerticalAlignment="Center"
+                                              Checked="CrosshairShow_Changed" Unchecked="CrosshairShow_Changed" />
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Draw the crosshair" Style="{StaticResource Subtext}" />
+                                        <TextBlock Text="Turn it off for a clean screen."
+                                                   Style="{StaticResource Subtext}" Opacity="0.7" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                </DockPanel>
+
+                                <DockPanel Margin="0,16,0,0">
+                                    <CheckBox x:Name="CrosshairDynamicSwitch" DockPanel.Dock="Right" Content="On"
+                                              Style="{StaticResource Switch}" VerticalAlignment="Center"
+                                              Checked="CrosshairDynamic_Changed" Unchecked="CrosshairDynamic_Changed" />
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Open with spread" Style="{StaticResource Subtext}" />
+                                        <TextBlock Text="The crosshair parts as your cone widens. Game style only."
+                                                   Style="{StaticResource Subtext}" Opacity="0.7" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Screen -->
+            <ScrollViewer x:Name="PageScreen" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                <StackPanel>
+                    <Border Style="{StaticResource Card}">
+                        <Grid x:Name="FlinchPanel">
+                            <StackPanel>
+                                <TextBlock Text="Damage feedback" Style="{StaticResource Section}" />
+                                <TextBlock Text="What happens to your view when a shot lands."
+                                           Style="{StaticResource Subtext}" Margin="0,3,0,0" />
+
+                                <Grid Margin="0,18,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="View kick" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="FlinchValueText" Grid.Column="1" Text="100%"
+                                               Style="{StaticResource Value}" MinWidth="76" />
+                                </Grid>
+                                <Slider x:Name="FlinchSlider" Minimum="0" Maximum="100"
+                                        TickFrequency="5" IsSnapToTickEnabled="True"
+                                        Style="{StaticResource Slider}" VerticalAlignment="Center"
+                                        ValueChanged="FlinchSlider_ValueChanged" />
+                                <DockPanel Margin="0,2,0,0">
+                                    <TextBlock DockPanel.Dock="Right" Text="Stock" Style="{StaticResource EndLabel}" />
+                                    <TextBlock Text="None" Style="{StaticResource EndLabel}" />
+                                </DockPanel>
+                                <TextBlock x:Name="FlinchHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
+
+                                <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,16,0,0" />
+
+                                <Grid Margin="0,16,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Screen blur" Style="{StaticResource Subtext}"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock x:Name="BlurValueText" Grid.Column="1" Text="100%"
+                                               Style="{StaticResource Value}" MinWidth="76" />
+                                </Grid>
+                                <Slider x:Name="BlurSlider" Minimum="0" Maximum="100"
+                                        TickFrequency="5" IsSnapToTickEnabled="True"
+                                        Style="{StaticResource Slider}" VerticalAlignment="Center"
+                                        ValueChanged="BlurSlider_ValueChanged" />
+                                <DockPanel Margin="0,2,0,0">
+                                    <TextBlock DockPanel.Dock="Right" Text="Stock" Style="{StaticResource EndLabel}" />
+                                    <TextBlock Text="None" Style="{StaticResource EndLabel}" />
+                                </DockPanel>
+                                <TextBlock x:Name="BlurHint" Margin="0,10,0,0" Style="{StaticResource Subtext}" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Setup -->
+            <ScrollViewer x:Name="PageSetup" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                <StackPanel>
+                    <Border Style="{StaticResource Card}">
                         <DockPanel>
                             <Button x:Name="RuntimeButton" DockPanel.Dock="Right" Content="Install"
                                     Click="Runtime_Click" MinWidth="96" VerticalAlignment="Top"
                                     Margin="12,0,0,0" />
                             <StackPanel>
-                                <TextBlock Text="FOV runtime" Style="{StaticResource Section}" />
+                                <TextBlock Text="Runtime" Style="{StaticResource Section}" />
                                 <TextBlock x:Name="RuntimeDetail"
-                                           Text="Adds X3DAudio1_7.dll to the game folder. The game loads it on every launch, however you start it."
+                                           Text="Adds X3DAudio1_7.dll to the game folder so the mod loads with the game."
                                            Style="{StaticResource Subtext}" Margin="0,3,0,0" />
                             </StackPanel>
                         </DockPanel>
+                    </Border>
 
-                        <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,14" />
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top"
+                                            Margin="12,0,0,0">
+                                    <Button x:Name="DxvkFileButton" Content="From file..." Click="DxvkFile_Click"
+                                            Padding="11,4" Margin="0,0,8,0" />
+                                    <Button x:Name="DxvkButton" Content="Install" Click="Dxvk_Click"
+                                            MinWidth="96" />
+                                </StackPanel>
+                                <StackPanel>
+                                    <TextBlock Text="DXVK" Style="{StaticResource Section}" />
+                                    <TextBlock x:Name="DxvkDetail"
+                                               Text="Optional. Renders the game through Vulkan instead of D3D9."
+                                               Style="{StaticResource Subtext}" Margin="0,3,0,0" />
+                                </StackPanel>
+                            </DockPanel>
 
-                        <DockPanel>
-                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,0,0,0">
-                                <Button x:Name="DxvkFileButton" Content="From file..." Click="DxvkFile_Click"
-                                        Padding="11,4" Margin="0,0,8,0" />
-                                <Button x:Name="DxvkButton" Content="Install" Click="Dxvk_Click"
-                                        MinWidth="96" />
-                            </StackPanel>
-                            <StackPanel>
-                                <TextBlock Text="DXVK (Vulkan renderer)" Style="{StaticResource Section}" />
-                                <TextBlock x:Name="DxvkDetail"
-                                           Text="Optional. Renders through Vulkan instead of D3D9."
-                                           Style="{StaticResource Subtext}" Margin="0,3,0,0" />
-                            </StackPanel>
-                        </DockPanel>
-                    </StackPanel>
-                </Border>
+                            <TextBlock Margin="0,12,0,0" Style="{StaticResource Subtext}" Opacity="0.7"
+                                       Text="The Steam overlay does not draw over Vulkan, and the game's own Direct3D effects may look different." />
+                        </StackPanel>
+                    </Border>
 
-            </StackPanel>
-        </ScrollViewer>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="About" Style="{StaticResource Section}" />
+                            <TextBlock Margin="0,3,0,0" Style="{StaticResource Subtext}"
+                                       Text="Settings are written to %LOCALAPPDATA%\MW3Mod\settings.ini and picked up by the game within a second. Nothing is applied until the runtime is installed." />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
 
-        <Border Grid.Row="1" Background="#141719" Padding="24,10">
+        <Border Grid.Row="3" Background="#141719" Padding="24,10">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                     <Button Content="Log" Click="OpenLog_Click" Padding="11,4" />

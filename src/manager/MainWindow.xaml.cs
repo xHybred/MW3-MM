@@ -38,6 +38,18 @@ public partial class MainWindow : Window
         _gameDir = GameLocator.FindGame();
         _config = ModConfig.Load();
 
+        // These cards no longer have a master switch: the sliders are the whole
+        // control, and the stock end of each slider is what leaves the game alone.
+        _config.FlinchEnabled = true;
+        _config.SpreadEnabled = true;
+        _config.RecoilEnabled = true;
+        _config.SwayEnabled = true;
+
+        // The blur slider carries the off state (0 = no blur), so a saved
+        // "Enabled=0" from the old switch becomes a slider at the bottom.
+        if (!_config.BlurEnabled) _config.BlurStrength = 0f;
+        _config.BlurEnabled = true;
+
         _loading = true;
         FovSlider.Value = Math.Clamp(_config.Fov, 60f, ModConfig.MaxFov);
         AimSlider.Value = Math.Clamp(_config.AimZoom * 100f, 100f, ModConfig.MaxZoom * 100f);
@@ -45,16 +57,12 @@ public partial class MainWindow : Window
         AffectedSwitch.IsChecked = _config.Affected;
         FlatSwitch.IsChecked = _config.AimFlat;
         FlinchSlider.Value = Math.Clamp(_config.FlinchStrength * 100f, 0f, 100f);
-        FlinchSwitch.IsChecked = _config.FlinchEnabled;
-        BlurSwitch.IsChecked = _config.BlurEnabled;
+        BlurSlider.Value = Math.Clamp(_config.BlurStrength * 100f, 0f, 100f);
         RecoilSlider.Value = Math.Clamp(_config.RecoilStrength * 100f, 0f, 100f);
-        RecoilSwitch.IsChecked = _config.RecoilEnabled;
         SwaySlider.Value = Math.Clamp(_config.SwayStrength * 100f, 0f, 100f);
-        SwaySwitch.IsChecked = _config.SwayEnabled;
-        FlashSwitch.IsChecked = _config.FlashEnabled;
+        FlashSwitch.IsChecked = !_config.FlashEnabled;
         SpreadSlider.Value = Math.Clamp(_config.SpreadAccuracy * 100f, 0f, 100f);
         BloomSlider.Value = Math.Clamp(_config.SpreadBloom * 100f, 0f, 100f);
-        SpreadSwitch.IsChecked = _config.SpreadEnabled;
         ViewmodelXSlider.Value = Math.Clamp(_config.ViewmodelX, -1.5f, 3f);
         ViewmodelZSlider.Value = Math.Clamp(_config.ViewmodelZ, -3f, 3f);
         ViewmodelYSlider.Value = Math.Clamp(_config.ViewmodelY, -3f, 3f);
@@ -72,9 +80,45 @@ public partial class MainWindow : Window
         }
 
         Refresh();
+        ShowPage(0);
         _statusTimer.Tick += (_, _) => RefreshStatus();
         _statusTimer.Start();
         RefreshStatus();
+    }
+
+    private readonly Button[] _navButtons = new Button[6];
+    private readonly FrameworkElement[] _pages = new FrameworkElement[6];
+    private int _page;
+
+    private void ShowPage(int index)
+    {
+        _navButtons[0] = NavAim;
+        _navButtons[1] = NavWeapon;
+        _navButtons[2] = NavViewmodel;
+        _navButtons[3] = NavCrosshair;
+        _navButtons[4] = NavScreen;
+        _navButtons[5] = NavSetup;
+        _pages[0] = PageAim;
+        _pages[1] = PageWeapon;
+        _pages[2] = PageViewmodel;
+        _pages[3] = PageCrosshair;
+        _pages[4] = PageScreen;
+        _pages[5] = PageSetup;
+
+        _page = index;
+        for (int i = 0; i < _pages.Length; ++i)
+        {
+            bool active = i == index;
+            _pages[i].Visibility = active ? Visibility.Visible : Visibility.Collapsed;
+            _navButtons[i].Background = (Brush)FindResource(active ? "CardBorder" : "CardBg");
+            _navButtons[i].Foreground = (Brush)FindResource(active ? "Text" : "Muted");
+        }
+    }
+
+    private void Nav_Click(object sender, RoutedEventArgs e)
+    {
+        ShowPage(sender == NavWeapon ? 1 : sender == NavViewmodel ? 2 : sender == NavCrosshair ? 3
+            : sender == NavScreen ? 4 : sender == NavSetup ? 5 : 0);
     }
 
     private void Refresh()
@@ -117,7 +161,7 @@ public partial class MainWindow : Window
         {
             RuntimeButton.Content = "Remove";
             RuntimeButton.IsEnabled = true;
-            RuntimeDetail.Text = "Installed. The FOV override applies from the next launch onward.";
+            RuntimeDetail.Text = "Installed. Settings are picked up while the game runs.";
         }
     }
 
@@ -166,10 +210,17 @@ public partial class MainWindow : Window
         FlinchPanel.Opacity = runtime ? 1.0 : 0.45;
         FlinchValueText.Text = Math.Round(FlinchSlider.Value).ToString("0") + "%";
         FlinchHint.Text = _config.FlinchStrength >= 0.999f
-            ? "Stock. Damage kicks the view exactly as it always did."
+            ? "Stock. Damage kicks the view as hard as it always did."
             : _config.FlinchStrength <= 0.001f
                 ? "No view kick at all when you take damage."
                 : "Damage kicks the view less, and the minimum kick shrinks with it.";
+
+        BlurValueText.Text = Math.Round(BlurSlider.Value).ToString("0") + "%";
+        BlurHint.Text = _config.BlurStrength >= 0.999f
+            ? "Stock. A hit washes the screen out as before."
+            : _config.BlurStrength <= 0.001f
+                ? "No blur when you are shot."
+                : "The wash is lighter, so the screen stays readable.";
 
         SpreadPanel.IsEnabled = runtime;
         SpreadPanel.Opacity = runtime ? 1.0 : 0.45;
@@ -188,6 +239,8 @@ public partial class MainWindow : Window
 
         RecoilPanel.IsEnabled = runtime;
         RecoilPanel.Opacity = runtime ? 1.0 : 0.45;
+        ViewmodelPanel.IsEnabled = runtime;
+        ViewmodelPanel.Opacity = runtime ? 1.0 : 0.45;
         RecoilValueText.Text = Math.Round(RecoilSlider.Value).ToString("0") + "%";
         RecoilHint.Text = _config.RecoilStrength >= 0.999f
             ? "Stock. The gun kicks exactly as it always did."
@@ -238,7 +291,16 @@ public partial class MainWindow : Window
             2 => "Halo: a ring with four gaps and a centre dot.",
             _ => "Game: the crosshair the game draws itself.",
         };
+
+        SetSwitchLabel(EnabledSwitch, _config.Enabled);
+        SetSwitchLabel(FlashSwitch, !_config.FlashEnabled);
+        SetSwitchLabel(ViewmodelSwitch, _config.ViewmodelEnabled);
+        SetSwitchLabel(CrosshairSwitch, _config.CrosshairEnabled);
+        SetSwitchLabel(CrosshairShowSwitch, _config.CrosshairShow);
+        SetSwitchLabel(CrosshairDynamicSwitch, _config.CrosshairDynamic);
     }
+
+    private static void SetSwitchLabel(CheckBox box, bool on) => box.Content = on ? "On" : "Off";
 
     private void RefreshStatus()
     {
@@ -296,17 +358,11 @@ public partial class MainWindow : Window
         SaveLater();
     }
 
-    private void Flinch_Changed(object sender, RoutedEventArgs e)
+    private void BlurSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (_loading) return;
-        _config.FlinchEnabled = FlinchSwitch.IsChecked == true;
-        SaveLater();
-    }
-
-    private void Blur_Changed(object sender, RoutedEventArgs e)
-    {
-        if (_loading) return;
-        _config.BlurEnabled = BlurSwitch.IsChecked == true;
+        _config.BlurStrength = (float)Math.Round(e.NewValue) / 100f;
+        UpdateFovUi();
         SaveLater();
     }
 
@@ -318,13 +374,6 @@ public partial class MainWindow : Window
         SaveLater();
     }
 
-    private void Recoil_Changed(object sender, RoutedEventArgs e)
-    {
-        if (_loading) return;
-        _config.RecoilEnabled = RecoilSwitch.IsChecked == true;
-        SaveLater();
-    }
-
     private void SwaySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (_loading) return;
@@ -333,17 +382,18 @@ public partial class MainWindow : Window
         SaveLater();
     }
 
-    private void Sway_Changed(object sender, RoutedEventArgs e)
-    {
-        if (_loading) return;
-        _config.SwayEnabled = SwaySwitch.IsChecked == true;
-        SaveLater();
-    }
-
     private void Flash_Changed(object sender, RoutedEventArgs e)
     {
         if (_loading) return;
-        _config.FlashEnabled = FlashSwitch.IsChecked == true;
+        _config.FlashEnabled = FlashSwitch.IsChecked != true;
+        UpdateFovUi();
+        SaveLater();
+    }
+
+    private void Viewmodel_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        _config.ViewmodelEnabled = ViewmodelSwitch.IsChecked == true;
         UpdateFovUi();
         SaveLater();
     }
@@ -376,6 +426,7 @@ public partial class MainWindow : Window
     {
         if (_loading) return;
         _config.CrosshairShow = CrosshairShowSwitch.IsChecked == true;
+        UpdateFovUi();
         SaveLater();
     }
 
@@ -388,8 +439,10 @@ public partial class MainWindow : Window
     }
 
     private void CrosshairDynamic_Changed(object sender, RoutedEventArgs e)
-    {        if (_loading) return;
+    {
+        if (_loading) return;
         _config.CrosshairDynamic = CrosshairDynamicSwitch.IsChecked == true;
+        UpdateFovUi();
         SaveLater();
     }
 
@@ -405,14 +458,6 @@ public partial class MainWindow : Window
     {
         if (_loading) return;
         _config.SpreadBloom = (float)Math.Round(e.NewValue) / 100f;
-        UpdateFovUi();
-        SaveLater();
-    }
-
-    private void Spread_Changed(object sender, RoutedEventArgs e)
-    {
-        if (_loading) return;
-        _config.SpreadEnabled = SpreadSwitch.IsChecked == true;
         UpdateFovUi();
         SaveLater();
     }
@@ -437,14 +482,6 @@ public partial class MainWindow : Window
     {
         if (_loading) return;
         _config.ViewmodelY = (float)Math.Round(e.NewValue, 1);
-        UpdateFovUi();
-        SaveLater();
-    }
-
-    private void Viewmodel_Changed(object sender, RoutedEventArgs e)
-    {
-        if (_loading) return;
-        _config.ViewmodelEnabled = ViewmodelSwitch.IsChecked == true;
         UpdateFovUi();
         SaveLater();
     }
