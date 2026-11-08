@@ -39,6 +39,7 @@ struct ModSettings {
     bool crosshairDebug = false;
     bool logEffectiveFov = false;
     bool dvarScanVerbose = false;
+    bool frameTimeDebug = false;
 };
 
 std::wstring SettingsPath();

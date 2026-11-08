@@ -76,6 +76,7 @@ bool LoadSettings(ModSettings& out) {
     out.crosshairDebug = GetPrivateProfileIntW(L"Debug", L"Crosshair", 0, path.c_str()) != 0;
     out.logEffectiveFov = GetPrivateProfileIntW(L"Debug", L"LogEffectiveFov", 0, path.c_str()) != 0;
     out.dvarScanVerbose = GetPrivateProfileIntW(L"Debug", L"DvarScan", 0, path.c_str()) != 0;
+    out.frameTimeDebug = GetPrivateProfileIntW(L"Debug", L"FrameTime", 0, path.c_str()) != 0;
     return true;
 }
 

@@ -40,4 +40,7 @@ target_link_libraries(mw3mod PRIVATE kernel32 user32)
 
 if(MSVC)
     target_compile_options(mw3mod PRIVATE /W4 /permissive- /EHsc)
+    # The DLL ships without symbols, so a map file is the only way to turn a
+    # crash address from a dump into a function name.
+    target_link_options(mw3mod PRIVATE "/MAP:${CMAKE_BINARY_DIR}/MW3Mod.map")
 endif()
