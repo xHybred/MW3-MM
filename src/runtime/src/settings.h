@@ -35,6 +35,7 @@ struct ModSettings {
     float crosshairOpacity = 1.0f;
     bool crosshairDynamic = false;
     bool crosshairShow = true;
+    int crosshairStyle = 0;
     bool crosshairDebug = false;
     bool logEffectiveFov = false;
     bool dvarScanVerbose = false;

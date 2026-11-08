@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.Win32;
@@ -223,6 +224,20 @@ public partial class MainWindow : Window
                 ? "The crosshair is drawn larger than stock."
                 : "The crosshair is drawn smaller than stock.";
         CrosshairOpacityValueText.Text = Math.Round(CrosshairOpacitySlider.Value).ToString("0") + "%";
+
+        Button[] styleButtons = { StyleGameButton, StyleSharpButton, StyleHaloButton };
+        for (int i = 0; i < styleButtons.Length; ++i)
+        {
+            bool active = i == _config.CrosshairStyle;
+            styleButtons[i].Background = (Brush)FindResource(active ? "Accent" : "CardBorder");
+            styleButtons[i].Foreground = (Brush)FindResource(active ? "Bg" : "Text");
+        }
+        CrosshairStyleHint.Text = _config.CrosshairStyle switch
+        {
+            1 => "Sharp: the same four bars, drawn in screen pixels instead of an 8x8 texture.",
+            2 => "Halo: a ring with four gaps and a centre dot.",
+            _ => "Game: the crosshair the game draws itself.",
+        };
     }
 
     private void RefreshStatus()
@@ -364,9 +379,16 @@ public partial class MainWindow : Window
         SaveLater();
     }
 
-    private void CrosshairDynamic_Changed(object sender, RoutedEventArgs e)
+    private void CrosshairStyle_Click(object sender, RoutedEventArgs e)
     {
         if (_loading) return;
+        _config.CrosshairStyle = sender == StyleSharpButton ? 1 : sender == StyleHaloButton ? 2 : 0;
+        UpdateFovUi();
+        SaveLater();
+    }
+
+    private void CrosshairDynamic_Changed(object sender, RoutedEventArgs e)
+    {        if (_loading) return;
         _config.CrosshairDynamic = CrosshairDynamicSwitch.IsChecked == true;
         SaveLater();
     }

@@ -45,6 +45,7 @@ public sealed class ModConfig
     public float CrosshairOpacity { get; set; } = 1.0f;
     public bool CrosshairDynamic { get; set; }
     public bool CrosshairShow { get; set; } = true;
+    public int CrosshairStyle { get; set; }
     public bool CrosshairDebug { get; set; }
     public bool LogEffectiveFov { get; set; }
     public bool DvarScan { get; set; }
@@ -201,6 +202,10 @@ public sealed class ModConfig
                         break;
                     case "dynamic": config.CrosshairDynamic = ParseBool(value, config.CrosshairDynamic); break;
                     case "show": config.CrosshairShow = ParseBool(value, config.CrosshairShow); break;
+                    case "style":
+                        if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int style))
+                            config.CrosshairStyle = Math.Clamp(style, 0, 2);
+                        break;
                 }
             }
             else if (section.Equals("Debug", StringComparison.OrdinalIgnoreCase))
@@ -270,6 +275,7 @@ public sealed class ModConfig
             "Opacity=" + CrosshairOpacity.ToString("0.###", CultureInfo.InvariantCulture),
             $"Dynamic={(CrosshairDynamic ? 1 : 0)}",
             $"Show={(CrosshairShow ? 1 : 0)}",
+            $"Style={CrosshairStyle}",
             "",
             "[Debug]",
             $"LogEffectiveFov={(LogEffectiveFov ? 1 : 0)}",

@@ -69,6 +69,7 @@ Size=1
 Opacity=1
 Dynamic=0
 Show=1
+Style=0
 ```
 
 **Remove** in the manager (or deleting that one DLL) puts the game back to vanilla.
@@ -106,6 +107,7 @@ apply without a restart.
 | `[Crosshair] Opacity` | 0..1, how solid the crosshair is. 1 = stock |
 | `[Crosshair] Dynamic` | 1 lets the crosshair open up with your spread, 0 keeps it fixed |
 | `[Crosshair] Show` | 0 hides the crosshair entirely |
+| `[Crosshair] Style` | 0 draws the game's own crosshair, 1 the same bars drawn by the mod, 2 a Halo-style ring |
 | `[Debug] LogEffectiveFov` | log each weapon's aim FOV when it changes |
 | `[Debug] DvarScan` | log every step of the dvar lookup |
 
@@ -210,6 +212,16 @@ its own number and re-applies the scale once instead of compounding it.
 Opacity, the dynamic mode and hiding the crosshair are plain dvars (`cg_crosshairAlpha`,
 `cg_crosshairAlphaMin`, `cg_crosshairDynamic`, `cg_drawCrosshair`) that the runtime writes and
 restores like the others.
+
+The stock crosshair is also blurry at high resolution, and no setting fixes that: it is four
+textured quads fed by an 8x8 texture (`side_small`) with linear filtering and no mip levels, so at
+1440p the game stretches a 64 pixel bitmap over twenty screen pixels. `[Crosshair] Style` replaces
+it. The runtime takes the D3D9 device from `Direct3DCreate9`/`CreateDevice` and, at the swap chain's
+`Present`, draws the crosshair itself as geometry in screen pixels, using the colour the engine's
+own drawer computed (so the red crosshair over an enemy still shows) and skipping the engine's
+draw. Style 1 is the same four bars, sharp; style 2 is a ring with four gaps and a centre dot. Both
+scale with `[Crosshair] Size` and follow `cg_crosshairVerticalOffset`. A custom style does not open
+up with spread, so `[Crosshair] Dynamic` only shows with style 0.
 
 ## Build
 

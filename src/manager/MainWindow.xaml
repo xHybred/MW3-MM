@@ -275,6 +275,24 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Style" Style="{StaticResource Subtext}" VerticalAlignment="Center"
+                                           Margin="0,0,10,0" />
+                                <Button x:Name="StyleGameButton" Grid.Column="1" Content="Game" Margin="0,0,6,0"
+                                        Padding="10,5" Click="CrosshairStyle_Click" />
+                                <Button x:Name="StyleSharpButton" Grid.Column="2" Content="Sharp" Margin="0,0,6,0"
+                                        Padding="10,5" Click="CrosshairStyle_Click" />
+                                <Button x:Name="StyleHaloButton" Grid.Column="3" Content="Halo"
+                                        Padding="10,5" Click="CrosshairStyle_Click" />
+                            </Grid>
+                            <TextBlock x:Name="CrosshairStyleHint" Margin="0,8,0,0" Style="{StaticResource Subtext}" />
+
+                            <Grid Margin="0,14,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Text="Size" Style="{StaticResource Subtext}" VerticalAlignment="Center" />
                                 <TextBlock x:Name="CrosshairSizeValueText" Grid.Column="1" Text="100%"
