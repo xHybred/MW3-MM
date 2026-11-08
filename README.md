@@ -62,6 +62,13 @@ Enabled=1
 XOffset=0
 ZOffset=0
 YOffset=0
+
+[Crosshair]
+Enabled=1
+Size=1
+Opacity=1
+Dynamic=0
+Show=1
 ```
 
 **Remove** in the manager (or deleting that one DLL) puts the game back to vanilla.
@@ -94,6 +101,11 @@ apply without a restart.
 | `[Viewmodel] XOffset` | -1.5..3, pulls the gun in (negative) for the oversized side pose, pushes it out (positive) |
 | `[Viewmodel] ZOffset` | -3..3, moves the gun in (negative) and out (positive) as it slides |
 | `[Viewmodel] YOffset` | -3..3, slides the gun down (negative) or up (positive) |
+| `[Crosshair] Enabled` | 1 applies the settings below, 0 restores your own dvars |
+| `[Crosshair] Size` | 0.5..2.0, how large the crosshair is drawn. 1 = stock |
+| `[Crosshair] Opacity` | 0..1, how solid the crosshair is. 1 = stock |
+| `[Crosshair] Dynamic` | 1 lets the crosshair open up with your spread, 0 keeps it fixed |
+| `[Crosshair] Show` | 0 hides the crosshair entirely |
 | `[Debug] LogEffectiveFov` | log each weapon's aim FOV when it changes |
 | `[Debug] DvarScan` | log every step of the dvar lookup |
 
@@ -187,6 +199,14 @@ it. Aiming is untouched; the aim-down-sights cone is a different field (`adsSpre
 The viewmodel cannot have its own field of view. A probe on the D3D9 device showed the game never
 calls `SetTransform(D3DTS_PROJECTION)` and draws the first-person model with the same projection as
 the world, so there is no separate matrix to widen.
+
+The crosshair has no size setting: the engine asks `FUN_140024B60` for the material and an integer
+size in pixels every frame, and that function is only called from the crosshair drawing code. The
+runtime hooks it and scales the size it hands back, which resizes the crosshair and nothing else;
+the integer lives in the weapon data, so the size tracks whatever the game was going to draw.
+Opacity, the dynamic mode and hiding the crosshair are plain dvars (`cg_crosshairAlpha`,
+`cg_crosshairAlphaMin`, `cg_crosshairDynamic`, `cg_drawCrosshair`) that the runtime writes and
+restores like the others.
 
 ## Build
 

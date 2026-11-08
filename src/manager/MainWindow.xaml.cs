@@ -58,6 +58,11 @@ public partial class MainWindow : Window
         ViewmodelZSlider.Value = Math.Clamp(_config.ViewmodelZ, -3f, 3f);
         ViewmodelYSlider.Value = Math.Clamp(_config.ViewmodelY, -3f, 3f);
         ViewmodelSwitch.IsChecked = _config.ViewmodelEnabled;
+        CrosshairSizeSlider.Value = Math.Clamp(_config.CrosshairSize * 100f, 50f, 200f);
+        CrosshairOpacitySlider.Value = Math.Clamp(_config.CrosshairOpacity * 100f, 0f, 100f);
+        CrosshairShowSwitch.IsChecked = _config.CrosshairShow;
+        CrosshairDynamicSwitch.IsChecked = _config.CrosshairDynamic;
+        CrosshairSwitch.IsChecked = _config.CrosshairEnabled;
         _loading = false;
 
         if (!File.Exists(ModConfig.SettingsPath))
@@ -208,6 +213,16 @@ public partial class MainWindow : Window
                              Math.Abs(_config.ViewmodelX) <= eps
             ? "Stock. The gun sits exactly where the game puts it."
             : "The gun sits at these offsets from its stock pose. The camera does not move.";
+
+        CrosshairPanel.IsEnabled = runtime;
+        CrosshairPanel.Opacity = runtime ? 1.0 : 0.45;
+        CrosshairSizeValueText.Text = Math.Round(CrosshairSizeSlider.Value).ToString("0") + "%";
+        CrosshairSizeHint.Text = _config.CrosshairSize >= 0.999f && _config.CrosshairSize <= 1.001f
+            ? "Stock. The crosshair is the size the game draws it."
+            : _config.CrosshairSize > 1.001f
+                ? "The crosshair is drawn larger than stock."
+                : "The crosshair is drawn smaller than stock.";
+        CrosshairOpacityValueText.Text = Math.Round(CrosshairOpacitySlider.Value).ToString("0") + "%";
     }
 
     private void RefreshStatus()
@@ -315,6 +330,44 @@ public partial class MainWindow : Window
         if (_loading) return;
         _config.FlashEnabled = FlashSwitch.IsChecked == true;
         UpdateFovUi();
+        SaveLater();
+    }
+
+    private void CrosshairSizeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_loading) return;
+        _config.CrosshairSize = (float)Math.Round(e.NewValue) / 100f;
+        UpdateFovUi();
+        SaveLater();
+    }
+
+    private void CrosshairOpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_loading) return;
+        _config.CrosshairOpacity = (float)Math.Round(e.NewValue) / 100f;
+        UpdateFovUi();
+        SaveLater();
+    }
+
+    private void Crosshair_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        _config.CrosshairEnabled = CrosshairSwitch.IsChecked == true;
+        UpdateFovUi();
+        SaveLater();
+    }
+
+    private void CrosshairShow_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        _config.CrosshairShow = CrosshairShowSwitch.IsChecked == true;
+        SaveLater();
+    }
+
+    private void CrosshairDynamic_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        _config.CrosshairDynamic = CrosshairDynamicSwitch.IsChecked == true;
         SaveLater();
     }
 

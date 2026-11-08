@@ -63,6 +63,14 @@ bool LoadSettings(ModSettings& out) {
     if (out.viewmodelY < -3.0f) out.viewmodelY = -3.0f;
     if (out.viewmodelY > 3.0f) out.viewmodelY = 3.0f;
     out.viewmodelDebug = GetPrivateProfileIntW(L"Debug", L"Viewmodel", 0, path.c_str()) != 0;
+    out.crosshairEnabled = GetPrivateProfileIntW(L"Crosshair", L"Enabled", 1, path.c_str()) != 0;
+    out.crosshairSize = ReadFloatKey(path, L"Crosshair", L"Size", 1.0f);
+    if (out.crosshairSize < 0.5f) out.crosshairSize = 0.5f;
+    if (out.crosshairSize > 2.0f) out.crosshairSize = 2.0f;
+    out.crosshairOpacity = Clamp01(ReadFloatKey(path, L"Crosshair", L"Opacity", 1.0f));
+    out.crosshairDynamic = GetPrivateProfileIntW(L"Crosshair", L"Dynamic", 0, path.c_str()) != 0;
+    out.crosshairShow = GetPrivateProfileIntW(L"Crosshair", L"Show", 1, path.c_str()) != 0;
+    out.crosshairDebug = GetPrivateProfileIntW(L"Debug", L"Crosshair", 0, path.c_str()) != 0;
     out.logEffectiveFov = GetPrivateProfileIntW(L"Debug", L"LogEffectiveFov", 0, path.c_str()) != 0;
     out.dvarScanVerbose = GetPrivateProfileIntW(L"Debug", L"DvarScan", 0, path.c_str()) != 0;
     return true;

@@ -30,6 +30,12 @@ struct ModSettings {
     float viewmodelZ = 0.0f;
     float viewmodelY = 0.0f;
     bool viewmodelDebug = false;
+    bool crosshairEnabled = true;
+    float crosshairSize = 1.0f;
+    float crosshairOpacity = 1.0f;
+    bool crosshairDynamic = false;
+    bool crosshairShow = true;
+    bool crosshairDebug = false;
     bool logEffectiveFov = false;
     bool dvarScanVerbose = false;
 };

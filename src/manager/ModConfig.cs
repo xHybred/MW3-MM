@@ -12,6 +12,8 @@ public sealed class ModConfig
     public const float MaxFov = 130f;
     public const float MinZoom = 1.0f;
     public const float MaxZoom = 1.35f;
+    public const float MinCrosshairSize = 0.5f;
+    public const float MaxCrosshairSize = 2.0f;
 
     public bool Enabled { get; set; } = true;
     public bool Affected { get; set; } = true;
@@ -38,6 +40,12 @@ public sealed class ModConfig
     public float ViewmodelX { get; set; }
     public float ViewmodelZ { get; set; }
     public float ViewmodelY { get; set; }
+    public bool CrosshairEnabled { get; set; } = true;
+    public float CrosshairSize { get; set; } = 1.0f;
+    public float CrosshairOpacity { get; set; } = 1.0f;
+    public bool CrosshairDynamic { get; set; }
+    public bool CrosshairShow { get; set; } = true;
+    public bool CrosshairDebug { get; set; }
     public bool LogEffectiveFov { get; set; }
     public bool DvarScan { get; set; }
 
@@ -178,6 +186,23 @@ public sealed class ModConfig
                         break;
                 }
             }
+            else if (section.Equals("Crosshair", StringComparison.OrdinalIgnoreCase))
+            {
+                switch (key.ToLowerInvariant())
+                {
+                    case "enabled": config.CrosshairEnabled = ParseBool(value, config.CrosshairEnabled); break;
+                    case "size":
+                        if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float size))
+                            config.CrosshairSize = Math.Clamp(size, MinCrosshairSize, MaxCrosshairSize);
+                        break;
+                    case "opacity":
+                        if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float opacity))
+                            config.CrosshairOpacity = Math.Clamp(opacity, 0f, 1f);
+                        break;
+                    case "dynamic": config.CrosshairDynamic = ParseBool(value, config.CrosshairDynamic); break;
+                    case "show": config.CrosshairShow = ParseBool(value, config.CrosshairShow); break;
+                }
+            }
             else if (section.Equals("Debug", StringComparison.OrdinalIgnoreCase))
             {
                 switch (key.ToLowerInvariant())
@@ -186,6 +211,7 @@ public sealed class ModConfig
                     case "dvarscan": config.DvarScan = ParseBool(value, config.DvarScan); break;
                     case "blurcalls": config.BlurDebug = ParseBool(value, config.BlurDebug); break;
                     case "recoil": config.RecoilDebug = ParseBool(value, config.RecoilDebug); break;
+                    case "crosshair": config.CrosshairDebug = ParseBool(value, config.CrosshairDebug); break;
                 }
             }
         }
@@ -238,10 +264,18 @@ public sealed class ModConfig
             "ZOffset=" + ViewmodelZ.ToString("0.###", CultureInfo.InvariantCulture),
             "YOffset=" + ViewmodelY.ToString("0.###", CultureInfo.InvariantCulture),
             "",
+            "[Crosshair]",
+            $"Enabled={(CrosshairEnabled ? 1 : 0)}",
+            "Size=" + CrosshairSize.ToString("0.###", CultureInfo.InvariantCulture),
+            "Opacity=" + CrosshairOpacity.ToString("0.###", CultureInfo.InvariantCulture),
+            $"Dynamic={(CrosshairDynamic ? 1 : 0)}",
+            $"Show={(CrosshairShow ? 1 : 0)}",
+            "",
             "[Debug]",
             $"LogEffectiveFov={(LogEffectiveFov ? 1 : 0)}",
             $"DvarScan={(DvarScan ? 1 : 0)}",
             $"Recoil={(RecoilDebug ? 1 : 0)}",
+            $"Crosshair={(CrosshairDebug ? 1 : 0)}",
             "",
         });
 

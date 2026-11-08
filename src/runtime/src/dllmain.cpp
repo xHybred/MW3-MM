@@ -4,6 +4,7 @@
 
 #include "adszoom.h"
 #include "blur.h"
+#include "crosshair.h"
 #include "sway.h"
 #include "viewmodel.h"
 #include "weapon.h"
@@ -81,6 +82,7 @@ DWORD WINAPI ModThread(LPVOID) {
     blur::Install();
     sway::Install();
     viewmodel::Install();
+    crosshair::Install();
 
     DvarRef fovDvar;
     DvarRef scaleDvar;
@@ -90,6 +92,8 @@ DWORD WINAPI ModThread(LPVOID) {
     bool flinchApplied = false;
     ULONGLONG nextResolve = 0;
     ULONGLONG nextFlinchResolve = 0;
+    bool crosshairApplied = false;
+    ULONGLONG nextCrosshairResolve = 0;
 
     // cg_* dvars only exist once a level is running, so keep looking for the
     // whole session instead of giving up on the frontend.
@@ -101,6 +105,7 @@ DWORD WINAPI ModThread(LPVOID) {
         blur::Update(settings);
         sway::Update(settings);
         viewmodel::Update(settings);
+        crosshair::Update(settings);
         weapon::Update(settings);
 
         // The flinch dvars exist from startup, so they resolve before a level
@@ -120,6 +125,25 @@ DWORD WINAPI ModThread(LPVOID) {
                 flinch::Restore();
                 LogF(L"flinch restored");
                 flinchApplied = false;
+            }
+        }
+
+        // The crosshair dvars are cg_* and only appear with a level.
+        if (!crosshair::Valid()) {
+            const ULONGLONG now = GetTickCount64();
+            if (now >= nextCrosshairResolve) {
+                nextCrosshairResolve = now + 2000;
+                crosshair::Resolve();
+            }
+        }
+        if (crosshair::Valid()) {
+            if (settings.crosshairEnabled) {
+                crosshair::Apply(settings);
+                crosshairApplied = true;
+            } else if (crosshairApplied) {
+                crosshair::Restore();
+                LogF(L"crosshair restored");
+                crosshairApplied = false;
             }
         }
 
@@ -180,5 +204,5 @@ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID) {
 // Version marker: the manager greps the file for it to tell this proxy apart
 // from the system X3DAudio1_7.dll it forwards to.
 extern "C" __declspec(dllexport) const char* MW3ModVersion() {
-    return "MW3Mod 0.8.0";
+    return "MW3Mod 0.9.0";
 }
