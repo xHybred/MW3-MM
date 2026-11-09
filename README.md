@@ -279,6 +279,13 @@ Output: `out\MW3Mod.dll` and `out\manager\`. The runtime alone is `.\build.ps1`.
   either by downloading the latest release from GitHub or from a `d3d9.dll` you already
   have. Both occupy `d3d9.dll`, so only one can be installed at a time; the proxy sits on
   `X3DAudio1_7.dll`, so the runtime does not collide with them. Neither is bundled.
+- ReShade 6.8 ships with the manager together with its preset pack, shader library and
+  `ShaderToggler` addon. It installs as `d3d9.dll` for native Direct3D 9, or as `dxgi.dll`
+  next to dgVoodoo when the Direct3D 11 wrapper is active. The manager moves it
+  automatically when the wrapper is added or removed, and keeps any `ReShade.ini`, preset
+  or shader file already in the game folder. Home opens the ReShade overlay. ReShade
+  cannot share `d3d9.dll` with DXVK, so remove it before installing DXVK; running both
+  needs ReShade's Vulkan install, which the manager does not set up.
 - dgVoodoo 2 ships a configuration that reports 256 MB of video memory, and with that the
   game renders a mission but never starts it: the loading card stays on screen and the
   level's dvars never register. The manager raises that line to 1024 MB on install, which

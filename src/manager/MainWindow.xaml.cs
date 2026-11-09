@@ -219,6 +219,7 @@ public partial class MainWindow : Window
         RefreshRuntimeRow();
         RefreshDxvkRow();
         RefreshD3d11Row();
+        RefreshReShadeRow();
         UpdateFovUi();
     }
 
@@ -259,14 +260,18 @@ public partial class MainWindow : Window
         bool installed = RuntimeInstaller.DxvkInstalled(_gameDir);
         string? version = RuntimeInstaller.DxvkVersion(_gameDir);
 
+        bool reShade = RuntimeInstaller.InstalledMode(_gameDir) != RuntimeInstaller.ReShadeMode.None;
+
         DxvkButton.Content = installed ? "Remove" : "Install";
-        DxvkButton.IsEnabled = _gameDir is not null && !_rendererBusy;
+        DxvkButton.IsEnabled = _gameDir is not null && !_rendererBusy && (installed || !reShade);
         DxvkFileButton.Visibility = installed ? Visibility.Collapsed : Visibility.Visible;
-        DxvkFileButton.IsEnabled = _gameDir is not null && !_rendererBusy;
+        DxvkFileButton.IsEnabled = _gameDir is not null && !_rendererBusy && (installed || !reShade);
 
         DxvkDetail.Text = installed
             ? version is null ? "Installed as d3d9.dll." : $"DXVK {version} installed as d3d9.dll."
-            : "Optional. Downloads the latest release from GitHub and renders through Vulkan.";
+            : reShade
+                ? "ReShade is installed. Remove it first; DXVK needs ReShade's Vulkan install to run together."
+                : "Optional. Downloads the latest release from GitHub and renders through Vulkan.";
     }
 
     private void RefreshD3d11Row()
@@ -282,6 +287,43 @@ public partial class MainWindow : Window
         D3d11Detail.Text = installed
             ? version is null ? "dgVoodoo installed as d3d9.dll." : $"dgVoodoo {version} installed as d3d9.dll."
             : "Optional. Hands the game's Direct3D 9 calls to Direct3D 11 through dgVoodoo 2.";
+    }
+
+    private void RefreshReShadeRow()
+    {
+        var mode = RuntimeInstaller.InstalledMode(_gameDir);
+        string? version = RuntimeInstaller.ReShadeVersion(_gameDir);
+        string tag = version is null ? "ReShade" : "ReShade " + version;
+
+        if (mode != RuntimeInstaller.ReShadeMode.None)
+        {
+            ReShadeButton.Content = "Remove";
+            ReShadeButton.IsEnabled = _gameDir is not null && !_rendererBusy;
+            ReShadeDetail.Text = mode == RuntimeInstaller.ReShadeMode.Direct3D11
+                ? $"{tag} installed as dxgi.dll next to the Direct3D 11 wrapper."
+                : $"{tag} installed as d3d9.dll for native Direct3D 9.";
+            return;
+        }
+
+        ReShadeButton.Content = "Install";
+
+        string? blocker = RuntimeInstaller.ReShadeBlocker(_gameDir);
+        ReShadeButton.IsEnabled = _gameDir is not null && !_rendererBusy && blocker is null;
+
+        if (_gameDir is null)
+        {
+            ReShadeDetail.Text = "Optional. Adds ReShade with its presets and shader library.";
+        }
+        else if (blocker is not null)
+        {
+            ReShadeDetail.Text = blocker;
+        }
+        else
+        {
+            ReShadeDetail.Text = RuntimeInstaller.TargetMode(_gameDir) == RuntimeInstaller.ReShadeMode.Direct3D11
+                ? "Optional. Installs ReShade for Direct3D 11 as dxgi.dll next to dgVoodoo, with the included presets and shaders."
+                : "Optional. Installs ReShade for native Direct3D 9 as d3d9.dll, with the included presets and shaders.";
+        }
     }
 
     private void UpdateFovUi()
@@ -905,6 +947,35 @@ public partial class MainWindow : Window
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
             Fail("Could not install Direct3D 11", ex);
+        }
+
+        Refresh();
+    }
+
+    private void ReShade_Click(object sender, RoutedEventArgs e)
+    {
+        if (_gameDir is null || _rendererBusy) return;
+        if (GuardGameRunning()) return;
+
+        try
+        {
+            if (RuntimeInstaller.InstalledMode(_gameDir) != RuntimeInstaller.ReShadeMode.None)
+            {
+                RuntimeInstaller.RemoveReShade(_gameDir);
+                StatusText.Text = "ReShade removed. Its presets and shaders are still in the game folder.";
+            }
+            else
+            {
+                var target = RuntimeInstaller.InstallReShade(_gameDir);
+                StatusText.Text = target == RuntimeInstaller.ReShadeMode.Direct3D11
+                    ? "ReShade installed as dxgi.dll. Start the game and press Home for its overlay."
+                    : "ReShade installed as d3d9.dll. Start the game and press Home for its overlay.";
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException
+                                       or FileNotFoundException)
+        {
+            Fail("Could not change ReShade", ex);
         }
 
         Refresh();

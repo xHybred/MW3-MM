@@ -14,9 +14,12 @@ public static class RuntimeInstaller
     // Only one wrapper can own this name, so DXVK, dgVoodoo and ReShade all
     // compete for the same file.
     public const string D3d9Name = "d3d9.dll";
+    public const string DxgiName = "dxgi.dll";
     public const string DgVoodooConfName = "dgVoodoo.conf";
 
     public enum D3d9Owner { Nobody, Dxvk, DgVoodoo, ReShade, SomethingElse }
+
+    public enum ReShadeMode { None, Direct3D9, Direct3D11 }
 
     public static string BundlePath => Path.Combine(AppContext.BaseDirectory, "MW3Mod.dll");
 
@@ -86,6 +89,10 @@ public static class RuntimeInstaller
         if (!Probe(sourceDll).Dxvk)
             throw new InvalidOperationException("That file does not look like a DXVK d3d9.dll.");
 
+        if (InstalledMode(gameDir) != ReShadeMode.None)
+            throw new InvalidOperationException(
+                "ReShade is installed. Remove it first; DXVK needs ReShade's Vulkan install to run together.");
+
         var taken = Owner(gameDir);
         if (taken != D3d9Owner.Nobody && taken != D3d9Owner.Dxvk)
             throw new InvalidOperationException(
@@ -141,9 +148,23 @@ public static class RuntimeInstaller
                 "That D3D9.dll is the 32-bit build. A 64-bit game only loads the x64 one.");
 
         var taken = Owner(gameDir);
-        if (taken != D3d9Owner.Nobody && taken != D3d9Owner.DgVoodoo)
+        if (taken == D3d9Owner.ReShade)
+        {
+            // ReShade has to move from the native Direct3D 9 slot to dxgi.dll
+            // before dgVoodoo can take d3d9.dll; otherwise it is left behind.
+            string dxgi = Path.Combine(gameDir, DxgiName);
+            if (File.Exists(dxgi) && !Probe(dxgi).ReShade)
+                throw new InvalidOperationException(
+                    "dxgi.dll is taken by another program, so ReShade cannot move aside for Direct3D 11.");
+
+            if (!File.Exists(dxgi))
+                File.Copy(Path.Combine(gameDir, D3d9Name), dxgi);
+        }
+        else if (taken != D3d9Owner.Nobody && taken != D3d9Owner.DgVoodoo)
+        {
             throw new InvalidOperationException(
                 $"d3d9.dll is taken by {OwnerName(taken)}. Remove it first.");
+        }
 
         File.Copy(sourceDll, Path.Combine(gameDir, D3d9Name), overwrite: true);
 
@@ -214,8 +235,168 @@ public static class RuntimeInstaller
         string conf = Path.Combine(gameDir, DgVoodooConfName);
         if (File.Exists(conf)) File.Delete(conf);
 
+        // The game is back on native Direct3D 9, so ReShade has to move from
+        // dxgi.dll to the d3d9.dll slot it now owns.
+        string dxgi = Path.Combine(gameDir, DxgiName);
+        if (File.Exists(dxgi) && Probe(dxgi).ReShade)
+        {
+            File.Copy(dxgi, Path.Combine(gameDir, D3d9Name), overwrite: true);
+            File.Delete(dxgi);
+        }
+
         Probed.Clear();
         return true;
+    }
+
+    public static string ReShadeAssetsDir =>
+        Path.Combine(AppContext.BaseDirectory, "Assets", "ReShade");
+
+    public static string ReShadeSource => Path.Combine(ReShadeAssetsDir, "ReShade64.dll");
+
+    public static ReShadeMode InstalledMode(string? gameDir)
+    {
+        if (gameDir is null) return ReShadeMode.None;
+
+        string d3d9 = Path.Combine(gameDir, D3d9Name);
+        if (File.Exists(d3d9) && Probe(d3d9).ReShade) return ReShadeMode.Direct3D9;
+
+        // A dxgi.dll copy only means anything while dgVoodoo owns d3d9.dll and
+        // turns the game into a Direct3D 11 client.
+        string dxgi = Path.Combine(gameDir, DxgiName);
+        if (File.Exists(dxgi) && Probe(dxgi).ReShade && Owner(gameDir) == D3d9Owner.DgVoodoo)
+            return ReShadeMode.Direct3D11;
+
+        return ReShadeMode.None;
+    }
+
+    public static ReShadeMode TargetMode(string? gameDir)
+    {
+        if (gameDir is null) return ReShadeMode.None;
+
+        var owner = Owner(gameDir);
+        if (owner == D3d9Owner.DgVoodoo) return ReShadeMode.Direct3D11;
+        if (owner == D3d9Owner.Nobody || owner == D3d9Owner.ReShade) return ReShadeMode.Direct3D9;
+        return ReShadeMode.None;
+    }
+
+    public static string? ReShadeBlocker(string? gameDir)
+    {
+        if (gameDir is null) return "Pick the game folder first.";
+        if (!File.Exists(ReShadeSource))
+            return "The bundled ReShade files are missing next to the manager.";
+
+        var owner = Owner(gameDir);
+        if (owner == D3d9Owner.Dxvk)
+            return "DXVK and ReShade cannot share d3d9.dll. Remove DXVK first.";
+        if (owner == D3d9Owner.SomethingElse)
+            return "d3d9.dll is taken by another program. Remove it first.";
+
+        if (owner == D3d9Owner.DgVoodoo)
+        {
+            string dxgi = Path.Combine(gameDir, DxgiName);
+            if (File.Exists(dxgi) && !Probe(dxgi).ReShade)
+                return "dxgi.dll is taken by another program. Remove it first.";
+        }
+
+        return null;
+    }
+
+    public static string? ReShadeVersion(string? gameDir)
+    {
+        var mode = InstalledMode(gameDir);
+        if (gameDir is null || mode == ReShadeMode.None) return null;
+
+        string path = Path.Combine(gameDir, mode == ReShadeMode.Direct3D11 ? DxgiName : D3d9Name);
+        try
+        {
+            var info = FileVersionInfo.GetVersionInfo(path);
+            string? text = info.ProductVersion ?? info.FileVersion;
+            var match = text is null ? null : Regex.Match(text, @"\d+\.\d+\.\d+");
+            return match is { Success: true } ? match.Value : null;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    public static ReShadeMode InstallReShade(string gameDir)
+    {
+        string? blocker = ReShadeBlocker(gameDir);
+        if (blocker is not null) throw new InvalidOperationException(blocker);
+
+        var target = TargetMode(gameDir);
+        string targetName = target == ReShadeMode.Direct3D11 ? DxgiName : D3d9Name;
+
+        File.Copy(ReShadeSource, Path.Combine(gameDir, targetName), overwrite: true);
+
+        // Changing between native Direct3D 9 and the Direct3D 11 wrapper changes
+        // the proxy name, so the copy under the old name is no longer loaded.
+        string otherName = target == ReShadeMode.Direct3D11 ? D3d9Name : DxgiName;
+        string other = Path.Combine(gameDir, otherName);
+        if (File.Exists(other) && Probe(other).ReShade) File.Delete(other);
+
+        CopyReShadeAssets(gameDir);
+        Probed.Clear();
+        return target;
+    }
+
+    public static bool RemoveReShade(string gameDir)
+    {
+        bool removed = false;
+
+        foreach (string name in new[] { DxgiName, D3d9Name })
+        {
+            string path = Path.Combine(gameDir, name);
+            if (!File.Exists(path) || !Probe(path).ReShade) continue;
+
+            File.Delete(path);
+            removed = true;
+        }
+
+        if (removed) Probed.Clear();
+        return removed;
+    }
+
+    private static void CopyReShadeAssets(string gameDir)
+    {
+        CopyIfMissing(Path.Combine(ReShadeAssetsDir, "ReShade.ini"),
+                      Path.Combine(gameDir, "ReShade.ini"));
+        CopyIfMissing(Path.Combine(ReShadeAssetsDir, "ReShadePreset.ini"),
+                      Path.Combine(gameDir, "ReShadePreset.ini"));
+        CopyIfMissing(Path.Combine(ReShadeAssetsDir, "ShaderToggler.addon64"),
+                      Path.Combine(gameDir, "ShaderToggler.addon64"));
+
+        CopyTree(Path.Combine(ReShadeAssetsDir, "ReShadePresets"),
+                 Path.Combine(gameDir, "ReShadePresets"));
+        CopyTree(Path.Combine(ReShadeAssetsDir, "reshade-shaders"),
+                 Path.Combine(gameDir, "reshade-shaders"));
+    }
+
+    // A returning user keeps their own ReShade.ini, presets and shaders; only
+    // the pieces that are missing from the game folder are filled in.
+    private static void CopyTree(string source, string target)
+    {
+        if (!Directory.Exists(source)) return;
+
+        foreach (string file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
+        {
+            CopyIfMissing(file, Path.Combine(target, Path.GetRelativePath(source, file)));
+        }
+    }
+
+    private static void CopyIfMissing(string source, string target)
+    {
+        if (!File.Exists(source) || File.Exists(target)) return;
+
+        string? folder = Path.GetDirectoryName(target);
+        if (folder is not null) Directory.CreateDirectory(folder);
+
+        File.Copy(source, target);
     }
 
     public static bool Is64Bit(string path)

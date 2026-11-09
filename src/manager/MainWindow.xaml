@@ -633,7 +633,7 @@
                             </DockPanel>
 
                             <TextBlock Margin="0,12,0,0" Style="{StaticResource Subtext}" Opacity="0.7"
-                                       Text="The Steam overlay does not draw over Vulkan, and the game's own Direct3D effects may look different." />
+                                       Text="The Steam overlay does not draw over Vulkan, and the game's own Direct3D effects may look different. Remove ReShade before installing DXVK; running both needs ReShade's Vulkan install." />
                         </StackPanel>
                     </Border>
 
@@ -656,7 +656,26 @@
                             </DockPanel>
 
                             <TextBlock Margin="0,12,0,0" Style="{StaticResource Subtext}" Opacity="0.7"
-                                       Text="Only one wrapper can own d3d9.dll, so this replaces DXVK or ReShade while it is installed. Its settings live in dgVoodoo.conf. The game's own crosshair stays; the custom ones need Direct3D 9." />
+                                       Text="Only one wrapper can own d3d9.dll, so this replaces DXVK. ReShade moves to dxgi.dll alongside it. Its settings live in dgVoodoo.conf. The game's own crosshair stays; the custom ones need Direct3D 9." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <DockPanel>
+                                <Button x:Name="ReShadeButton" DockPanel.Dock="Right" Content="Install"
+                                        Click="ReShade_Click" MinWidth="96" VerticalAlignment="Top"
+                                        Margin="12,0,0,0" />
+                                <StackPanel>
+                                    <TextBlock Text="ReShade" Style="{StaticResource Section}" />
+                                    <TextBlock x:Name="ReShadeDetail"
+                                               Text="Optional. Adds ReShade with its presets and shader library."
+                                               Style="{StaticResource Subtext}" Margin="0,3,0,0" />
+                                </StackPanel>
+                            </DockPanel>
+
+                            <TextBlock Margin="0,12,0,0" Style="{StaticResource Subtext}" Opacity="0.7"
+                                       Text="ReShade follows the renderer: native Direct3D 9 uses d3d9.dll, the Direct3D 11 wrapper uses dxgi.dll. It moves by itself when you add or remove the wrapper. Presets, shaders and ReShade.ini are included; existing files are kept. Home opens its overlay." />
                         </StackPanel>
                     </Border>
 
