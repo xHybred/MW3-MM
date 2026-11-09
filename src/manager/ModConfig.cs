@@ -49,6 +49,7 @@ public sealed class ModConfig
     public int CrosshairStyle { get; set; }
     public bool CrosshairDebug { get; set; }
     public bool SkipIntro { get; set; }
+    public bool CheckOnLaunch { get; set; } = true;
     public bool LogEffectiveFov { get; set; }
     public bool DvarScan { get; set; }
 
@@ -292,6 +293,11 @@ public sealed class ModConfig
                 if (key.ToLowerInvariant() == "skipintro")
                     config.SkipIntro = ParseBool(value, config.SkipIntro);
             }
+            else if (section.Equals("Update", StringComparison.OrdinalIgnoreCase))
+            {
+                if (key.ToLowerInvariant() == "checkonlaunch")
+                    config.CheckOnLaunch = ParseBool(value, config.CheckOnLaunch);
+            }
             else if (section.Equals("Debug", StringComparison.OrdinalIgnoreCase))
             {
                 switch (key.ToLowerInvariant())
@@ -364,6 +370,9 @@ public sealed class ModConfig
             "",
             "[Startup]",
             $"SkipIntro={(SkipIntro ? 1 : 0)}",
+            "",
+            "[Update]",
+            $"CheckOnLaunch={(CheckOnLaunch ? 1 : 0)}",
             "",
             "[Debug]",
             $"LogEffectiveFov={(LogEffectiveFov ? 1 : 0)}",

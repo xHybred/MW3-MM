@@ -35,4 +35,10 @@ if (-not $iscc) { throw 'Inno Setup 6 not found. Install it from https://jrsoftw
 & $iscc "/DAppVersion=$version" (Join-Path $root 'installer\MW3Mod.iss')
 if ($LASTEXITCODE -ne 0) { throw 'Installer compile failed' }
 
-Write-Host "built $out\MW3ModSetup.exe"
+$setup = Join-Path $out 'MW3ModSetup.exe'
+$hash = (Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant()
+$checksum = "$hash  MW3ModSetup.exe`n"
+[IO.File]::WriteAllText((Join-Path $out 'MW3ModSetup.exe.sha256'), $checksum, [Text.Encoding]::ASCII)
+
+Write-Host "built $setup"
+Write-Host "sha256 $hash (out\MW3ModSetup.exe.sha256)"

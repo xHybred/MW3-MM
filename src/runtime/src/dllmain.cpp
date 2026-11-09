@@ -15,7 +15,7 @@
 #include "log.h"
 #include "settings.h"
 
-#define MW3MOD_VERSION "0.11.16"
+#define MW3MOD_VERSION "0.11.17"
 
 namespace {
 

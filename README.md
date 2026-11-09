@@ -33,6 +33,18 @@ configuration at once: **Default** puts every value back to stock, **Recommended
 starting point, **Halo** adds the ring crosshair, and **Bodycam** is the pulled-in, perfect
 hipfire look. Change anything afterwards and the list switches to `Custom`.
 
+## Updates
+
+The manager checks GitHub Releases when it starts. The switch in the Setup tab turns that
+off; **Check now** asks immediately. When a newer version is published, the manager offers
+**Install now** or **Later**. Install downloads the release setup, verifies its SHA-256
+checksum and publisher metadata, closes the manager, runs the setup silently, and relaunches
+it. The install folder and your `%LOCALAPPDATA%\MW3Mod` settings stay where they are.
+
+The default repository is `xHybred/MW3-MM`. Set `MW3MOD_UPDATE_REPO` to `owner/name` to test
+another repository. A release must publish `MW3ModSetup.exe` and `MW3ModSetup.exe.sha256`;
+the build writes both to `out`.
+
 Manual install, if you prefer:
 
 1. Copy `out\MW3Mod.dll` into the game folder as `X3DAudio1_7.dll`.
@@ -130,6 +142,7 @@ apply without a restart.
 | `[Crosshair] Show` | 0 hides the crosshair entirely |
 | `[Crosshair] Style` | 0 draws the game's own crosshair, 1 the same bars drawn by the mod, 2 a Halo-style ring |
 | `[Startup] SkipIntro` | 1 launches straight to the main menu, 0 plays the opening movie. The manager writes this into `players2\config.cfg` |
+| `[Update] CheckOnLaunch` | 1 checks GitHub Releases when the manager starts, 0 leaves it to the Check now button |
 | `[Debug] LogEffectiveFov` | log each weapon's aim FOV when it changes |
 | `[Debug] DvarScan` | log every step of the dvar lookup |
 
@@ -287,8 +300,10 @@ To build the installer, run:
 ```
 
 It builds the runtime, publishes a self-contained manager (no .NET runtime needed on the
-target machine), stages the ReShade assets, and writes `out\MW3ModSetup.exe`. The setup
-installs to `C:\Program Files\Hybred Tools\MW3 Mod Manager` and adds an uninstaller.
+target machine), stages the ReShade assets, and writes `out\MW3ModSetup.exe` plus
+`out\MW3ModSetup.exe.sha256`. The setup installs to
+`C:\Program Files\Hybred Tools\MW3 Mod Manager` and adds an uninstaller. Upload both files
+to the GitHub release so the in-app updater can verify the download.
 
 ## Notes and limits
 

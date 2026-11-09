@@ -22,6 +22,10 @@ public partial class MainWindow : Window
     private bool _rendererBusy;
     private bool _gameWasRunning;
     private long _statusHoldUntil;
+    private bool _updateBusy;
+    private CancellationTokenSource? _updateCts;
+    private ReleaseInfo? _availableRelease;
+    private UpdateDownload? _downloaded;
 
     private readonly DispatcherTimer _statusTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromMilliseconds(300) };
@@ -31,7 +35,13 @@ public partial class MainWindow : Window
         InitializeComponent();
         _saveTimer.Tick += (_, _) => { _saveTimer.Stop(); SaveConfig(); };
         Loaded += OnLoaded;
-        Closed += (_, _) => { _statusTimer.Stop(); _saveTimer.Stop(); Log.Info("Manager closed."); };
+        Closed += (_, _) =>
+        {
+            _updateCts?.Cancel();
+            _statusTimer.Stop();
+            _saveTimer.Stop();
+            Log.Info("Manager closed.");
+        };
         SourceInitialized += (_, _) => EnableDarkTitleBar();
     }
 
@@ -97,6 +107,8 @@ public partial class MainWindow : Window
         _statusTimer.Start();
         RefreshStatus();
         Log.Info("Manager ready.");
+
+        if (_config.CheckOnLaunch) _ = CheckForUpdatesAsync(false);
     }
 
     /// <summary>Pushes the loaded configuration into every control at once.</summary>
@@ -126,6 +138,7 @@ public partial class MainWindow : Window
         CrosshairShowSwitch.IsChecked = _config.CrosshairShow;
         CrosshairDynamicSwitch.IsChecked = _config.CrosshairDynamic;
         CrosshairSwitch.IsChecked = _config.CrosshairEnabled;
+        AutoUpdateSwitch.IsChecked = _config.CheckOnLaunch;
     }
 
     private readonly Button[] _navButtons = new Button[6];
@@ -247,6 +260,7 @@ public partial class MainWindow : Window
         RefreshDxvkRow();
         RefreshD3d11Row();
         RefreshReShadeRow();
+        RefreshUpdateRow();
         UpdateFovUi();
     }
 
@@ -484,6 +498,7 @@ public partial class MainWindow : Window
         SetSwitchLabel(EnabledSwitch, _config.Enabled);
         SetSwitchLabel(AimSwitch, _config.AimEnabled);
         SetSwitchLabel(IntroSwitch, _config.SkipIntro);
+        SetSwitchLabel(AutoUpdateSwitch, _config.CheckOnLaunch);
         IntroHint.Text = _config.SkipIntro
             ? "The opening movie is skipped, so the game goes straight to the menu."
             : "The opening movie plays on launch.";
@@ -556,6 +571,15 @@ public partial class MainWindow : Window
             StatusText.Text = "Could not edit config.cfg: " + ex.Message;
             _statusHoldUntil = Environment.TickCount64 + 4000;
         }
+    }
+
+    private void AutoUpdate_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        _config.CheckOnLaunch = AutoUpdateSwitch.IsChecked == true;
+        SetSwitchLabel(AutoUpdateSwitch, _config.CheckOnLaunch);
+        Log.Info("Update checks on launch " + (_config.CheckOnLaunch ? "enabled." : "disabled."));
+        SaveLater();
     }
 
     private void FovSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -1038,6 +1062,185 @@ public partial class MainWindow : Window
         }
 
         Refresh();
+    }
+
+    private void Update_Click(object sender, RoutedEventArgs e)
+    {
+        if (_updateBusy)
+        {
+            _updateCts?.Cancel();
+            return;
+        }
+
+        if (_availableRelease is not null) _ = InstallUpdateAsync(_availableRelease);
+        else _ = CheckForUpdatesAsync(true);
+    }
+
+    private async Task CheckForUpdatesAsync(bool manual)
+    {
+        if (!BeginUpdate()) return;
+
+        bool downloading = false;
+        try
+        {
+            UpdateDetail.Text = "Checking GitHub Releases...";
+            StatusText.Text = "Checking for updates...";
+            Log.Info("Update check started (" + (manual ? "manual" : "automatic") + ").");
+
+            using HttpClient http = UpdateService.CreateHttpClient();
+            ReleaseInfo release = await UpdateService.FindLatestAsync(http, _updateCts!.Token);
+
+            if (!UpdateService.IsNewer(release))
+            {
+                _availableRelease = null;
+                _downloaded = null;
+                UpdateDetail.Text = "You are up to date (" + UpdateService.CurrentVersionText + ").";
+                Log.Info("Update check: up to date at " + UpdateService.CurrentVersionText + ".");
+                if (manual)
+                {
+                    MessageBox.Show(this,
+                        "MW3 Mod Manager " + UpdateService.CurrentVersionText + " is up to date.",
+                        "No update available", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                return;
+            }
+
+            _availableRelease = release;
+            _downloaded = null;
+            UpdateDetail.Text =
+                $"Version {release.Version.ToString(3)} is available. You have {UpdateService.CurrentVersionText}.";
+            Log.Info($"Update available: {release.Version.ToString(3)} ({release.Tag}).");
+
+            MessageBoxResult answer = MessageBox.Show(this,
+                $"MW3 Mod Manager {release.Version.ToString(3)} is available.\n\n" +
+                "Install it now? The manager will close, update, and reopen.",
+                "Update available", MessageBoxButton.YesNo, MessageBoxImage.Information);
+            if (answer == MessageBoxResult.Yes)
+            {
+                downloading = true;
+                await DownloadAndInstallAsync(release);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            Log.Info("Update check cancelled.");
+            UpdateDetail.Text = "Update check cancelled.";
+        }
+        catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        {
+            Log.Warn("Update cancelled at the Windows elevation prompt.");
+            UpdateDetail.Text = "Update cancelled. The manager was not changed.";
+        }
+        catch (System.ComponentModel.Win32Exception ex)
+        {
+            Log.Error("Could not start the update installer", ex);
+            UpdateDetail.Text = "Could not start the update installer. See manager.log.";
+            Fail("Could not install the update", ex);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException or IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            string title = downloading ? "Could not install the update" : "Could not check for updates";
+            UpdateDetail.Text = title + ". See manager.log.";
+            if (manual || downloading) Fail(title, ex);
+            else Log.Error("Automatic update check failed", ex);
+        }
+        finally
+        {
+            EndUpdate();
+        }
+    }
+
+    private async Task InstallUpdateAsync(ReleaseInfo release)
+    {
+        if (!BeginUpdate()) return;
+
+        try
+        {
+            await DownloadAndInstallAsync(release);
+        }
+        catch (OperationCanceledException)
+        {
+            Log.Info("Update download cancelled.");
+            UpdateDetail.Text = "Update cancelled. The current version is unchanged.";
+        }
+        catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        {
+            Log.Warn("Update cancelled at the Windows elevation prompt.");
+            UpdateDetail.Text = "Update cancelled. The manager was not changed.";
+        }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            Log.Error("Update failed", ex);
+            UpdateDetail.Text = "Update failed. The current version is unchanged. See manager.log.";
+            Fail("Could not install the update", ex);
+        }
+        finally
+        {
+            EndUpdate();
+        }
+    }
+
+    private async Task DownloadAndInstallAsync(ReleaseInfo release)
+    {
+        UpdateDownload download;
+        if (_downloaded is not null && File.Exists(_downloaded.Path))
+        {
+            download = _downloaded;
+            Log.Info("Using the downloaded update at " + download.Path + ".");
+        }
+        else
+        {
+            using HttpClient http = UpdateService.CreateHttpClient();
+            var progress = new Progress<double>(value =>
+            {
+                string text = value < 0
+                    ? "Downloading the update..."
+                    : $"Downloading the update... {value:P0}";
+                UpdateDetail.Text = text;
+                StatusText.Text = text;
+            });
+
+            download = await UpdateService.DownloadAsync(http, release, progress, _updateCts!.Token);
+            _downloaded = download;
+            Log.Info($"Update downloaded and verified: {download.Path} (SHA-256 {download.Sha256}).");
+        }
+
+        UpdateDetail.Text = "Starting the installer...";
+        StatusText.Text = "Starting the update...";
+        UpdateService.Install(download.Path, AppContext.BaseDirectory, true);
+        Log.Info("Update installer started; closing the manager for the update.");
+        Application.Current.Shutdown();
+    }
+
+    private bool BeginUpdate()
+    {
+        if (_updateBusy) return false;
+
+        _updateBusy = true;
+        _updateCts = new CancellationTokenSource();
+        RefreshUpdateRow();
+        return true;
+    }
+
+    private void EndUpdate()
+    {
+        _updateBusy = false;
+        _updateCts?.Dispose();
+        _updateCts = null;
+        RefreshUpdateRow();
+    }
+
+    private void RefreshUpdateRow()
+    {
+        if (_updateBusy)
+        {
+            UpdateButton.Content = "Cancel";
+            UpdateButton.IsEnabled = true;
+            return;
+        }
+
+        UpdateButton.Content = _availableRelease is not null ? "Install update" : "Check now";
+        UpdateButton.IsEnabled = true;
     }
 
     private bool GuardGameRunning()

@@ -1,7 +1,7 @@
 ; Build with build-setup.ps1, or run ISCC directly after staging out\installer\app.
 
 #ifndef AppVersion
-  #define AppVersion "0.11.16"
+  #define AppVersion "0.11.17"
 #endif
 
 #ifndef InstallPrivileges
@@ -62,7 +62,14 @@ Name: "{autoprograms}\Hybred Tools\MW3 Mod Manager"; Filename: "{app}\{#AppExeNa
 Name: "{autodesktop}\MW3 Mod Manager"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#AppExeName}"; Description: "Launch MW3 Mod Manager"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#AppExeName}"; Description: "Launch MW3 Mod Manager"; Flags: nowait postinstall skipifsilent; Check: not RelaunchRequested
+Filename: "{app}\{#AppExeName}"; Flags: nowait runasoriginaluser; Check: RelaunchRequested
+
+[Code]
+function RelaunchRequested: Boolean;
+begin
+  Result := ExpandConstant('{param:RELAUNCH|0}') = '1';
+end;
 
 [Messages]
 WelcomeLabel2=This will install [name/ver] on your computer.%n%nThe setup installs the manager. Use it to install the mod into Call of Duty: Modern Warfare 3.
