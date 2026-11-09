@@ -100,7 +100,7 @@ public static class Presets
 
     public static Preset Halo { get; } = new(
         "Halo",
-        "The tuned setup with the ring crosshair: perfect hipfire, no bloom, and the gun pulled in.",
+        "A wide view with quieter damage feedback, a steadier gun and a clean crosshair.",
         new ModConfig
         {
             Enabled = true,
@@ -111,26 +111,26 @@ public static class Presets
             AimFlat = false,
             AimZoom = 1.07f,
 
-            FlinchStrength = 0.4f,
+            FlinchStrength = 0.2f,
             BlurStrength = 0f,
             RecoilStrength = 0.4f,
             SwayStrength = 0f,
             FlashEnabled = false,
-            SpreadAccuracy = 1.0f,
-            SpreadAimAccuracy = 1.0f,
-            SpreadBloom = 1.0f,
+            SpreadAccuracy = 0.25f,
+            SpreadAimAccuracy = 0.25f,
+            SpreadBloom = 1f,
 
             ViewmodelEnabled = true,
             ViewmodelX = -1.2f,
-            ViewmodelZ = 1.8f,
-            ViewmodelY = 0.5f,
+            ViewmodelZ = 0f,
+            ViewmodelY = 0f,
 
             CrosshairEnabled = true,
             CrosshairSize = 0.9f,
             CrosshairOpacity = 0.85f,
             CrosshairDynamic = false,
             CrosshairShow = true,
-            CrosshairStyle = 2,
+            CrosshairStyle = 0,
         });
 
     public static Preset Bodycam { get; } = new(
