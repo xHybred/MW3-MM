@@ -76,14 +76,14 @@ public static class Presets
             AimFlat = false,
             AimZoom = 1.07f,
 
-            FlinchStrength = 0.4f,
+            FlinchStrength = 0.2f,
             BlurStrength = 0f,
             RecoilStrength = 0.4f,
             SwayStrength = 0f,
             FlashEnabled = false,
             SpreadAccuracy = 0.25f,
             SpreadAimAccuracy = 0.25f,
-            SpreadBloom = 0.65f,
+            SpreadBloom = 1f,
 
             ViewmodelEnabled = true,
             ViewmodelX = -1.2f,
@@ -91,7 +91,7 @@ public static class Presets
             ViewmodelY = 0f,
 
             CrosshairEnabled = true,
-            CrosshairSize = 1.0f,
+            CrosshairSize = 0.9f,
             CrosshairOpacity = 0.85f,
             CrosshairDynamic = false,
             CrosshairShow = true,
