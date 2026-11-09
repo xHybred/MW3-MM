@@ -12,7 +12,12 @@
     <PlatformTarget>x64</PlatformTarget>
     <Platforms>x64</Platforms>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\AppIcon.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <None Update="Assets\ReShade\**\*">
