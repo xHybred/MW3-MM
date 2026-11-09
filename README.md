@@ -11,11 +11,22 @@ the game from Steam, a shortcut, or a launcher.
 
 ## Install
 
-Run `out\manager\MW3ModManager.exe`. It finds the Steam install on its own (Browse if it
-does not), then press **Install** in the FOV runtime row and pick a FOV.
+Run `out\MW3ModSetup.exe` and install it to `C:\Program Files\Hybred Tools`. The setup
+adds a Start Menu shortcut and an uninstaller in Windows Settings. Launch **MW3 Mod
+Manager** from the Start Menu. It finds the Steam install on its own (Browse if it does
+not). Open the **Setup** tab, press **Install** in the Runtime row, then set your FOV on
+the **Aim** tab.
 
 The manager only writes files and settings; it does not need to stay running and does not
 need to launch the game. The game loads the mod on every start.
+
+To run the manager without installing it, use `out\manager\MW3ModManager.exe` from a
+build.
+
+The setup only installs the manager. The mod itself is installed into the game from the
+manager. Uninstalling the manager leaves the mod in the game and your settings in
+`%LOCALAPPDATA%\MW3Mod`; remove the runtime in the manager first if you want a clean
+uninstall.
 
 Settings are grouped into tabs, and the preset list at the right of the tab bar applies a whole
 configuration at once: **Default** puts every value back to stock, **Recommended** is a tuned
@@ -255,13 +266,24 @@ the proxy's thread gets a look, so the toggle needs the manager and a closed gam
 
 ## Build
 
-Needs Visual Studio 2022 Build Tools with the C++ workload, CMake, and the .NET 10 SDK.
+Needs Visual Studio 2022 Build Tools with the C++ workload, CMake, the .NET 10 SDK, and
+Inno Setup 6.
 
 ```powershell
 .\build.ps1 -Manager
 ```
 
 Output: `out\MW3Mod.dll` and `out\manager\`. The runtime alone is `.\build.ps1`.
+
+To build the installer, run:
+
+```powershell
+.\build-setup.ps1
+```
+
+It builds the runtime, publishes a self-contained manager (no .NET runtime needed on the
+target machine), stages the ReShade assets, and writes `out\MW3ModSetup.exe`. The setup
+installs to `C:\Program Files\Hybred Tools` and adds an uninstaller.
 
 ## Notes and limits
 
