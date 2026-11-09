@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.2
+
+- Fixed hit registration at stock settings by skipping neutral weapon-state writes and removing the diagnostic bullet and RNG hooks from release builds.
+- Stock settings no longer write weapon fields or open the runtime log from the shot path.
+
 ## 1.0.1
 
 - Fixed the runtime Update button so it installs the newer runtime instead of removing it.

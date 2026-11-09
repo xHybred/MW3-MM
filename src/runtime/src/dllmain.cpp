@@ -15,7 +15,7 @@
 #include "log.h"
 #include "settings.h"
 
-#define MW3MOD_VERSION "1.0.1"
+#define MW3MOD_VERSION "1.0.2"
 
 namespace {
 
@@ -127,6 +127,11 @@ DWORD WINAPI ModThread(LPVOID) {
                  settings.viewmodelZ, settings.viewmodelY,
                  settings.crosshairEnabled ? 1 : 0, settings.crosshairSize,
                  settings.crosshairOpacity, settings.crosshairStyle);
+            LogF(L"settings debug blur=%d recoil=%d sway=%d spread=%d viewmodel=%d crosshair=%d frame=%d",
+                 settings.blurDebug ? 1 : 0, settings.recoilDebug ? 1 : 0,
+                 settings.swayDebug ? 1 : 0, settings.spreadDebug ? 1 : 0,
+                 settings.viewmodelDebug ? 1 : 0, settings.crosshairDebug ? 1 : 0,
+                 settings.frameTimeDebug ? 1 : 0);
             loggedSettings = true;
         }
         g_dvarScanVerbose = settings.dvarScanVerbose;

@@ -13,6 +13,14 @@
 
 #include <MinHook.h>
 
+// The bullet and RNG detours only exist to explain where a shot's cone comes
+// from. They sit directly on the shot path, so release builds leave them out.
+// Define MW3MOD_DIAGNOSTIC_HOOKS=1 in a local build when that investigation is
+// needed again.
+#ifndef MW3MOD_DIAGNOSTIC_HOOKS
+#define MW3MOD_DIAGNOSTIC_HOOKS 0
+#endif
+
 namespace
 {
     // The engine asks this one function for the cone a bullet is randomised
@@ -102,21 +110,26 @@ namespace
         const float vanilla = g_original(clientNum, viaSlot);
 
         float result = vanilla;
+        bool scaled = false;
         if (g_enabled.load(std::memory_order_relaxed))
         {
             const float strength = std::clamp(1.0f - g_aim.load(std::memory_order_relaxed), 0.0f, 1.0f);
             if (strength < 0.999f)
+            {
                 result = vanilla * strength;
+                scaled = true;
+            }
         }
 
         // Logged after scaling, so the numbers below are what the engine was
-        // handed rather than what it stored.
-        if (g_log.load(std::memory_order_relaxed) && result > 0.0f)
+        // handed rather than what it stored. Stock settings never open the log.
+        if (scaled && g_log.load(std::memory_order_relaxed) && result > 0.0f)
             Record(reinterpret_cast<size_t>(_ReturnAddress()) - ModuleBase(), result);
 
         return result;
     }
 
+#if MW3MOD_DIAGNOSTIC_HOOKS
     // The function that puts a shot inside its cone. It takes the cone in
     // degrees in xmm1, converts it to radians, takes the sine and walks one
     // iteration per pellet, asking the random number generator for an angle.
@@ -237,6 +250,7 @@ namespace
              spreadDeg,
              reinterpret_cast<size_t>(_ReturnAddress()) - ModuleBase(), x, y, z);
     }
+#endif
 }
 
 bool spread::Install()
@@ -271,6 +285,7 @@ bool spread::Install()
         LogF(L"spread: hook failed at module+0x%zx", kAdsSpreadOffset);
     }
 
+#if MW3MOD_DIAGNOSTIC_HOOKS
     if (std::memcmp(base + kBulletSpreadOffset, kBulletPrologue, sizeof(kBulletPrologue)) != 0)
     {
         LogF(L"spread: unexpected code at module+0x%zx, bullet cone untouched", kBulletSpreadOffset);
@@ -301,6 +316,9 @@ bool spread::Install()
     {
         LogF(L"spread: rng watch failed at module+0x%zx", kRngOffset);
     }
+#else
+    LogF(L"spread: diagnostic bullet/rng hooks disabled");
+#endif
 
     return any;
 }

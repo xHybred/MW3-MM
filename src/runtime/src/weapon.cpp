@@ -90,7 +90,9 @@ namespace
         // WeaponDef, so each offset is judged on its own instead of rejecting
         // the object wholesale.
         bool fieldOk[kFieldCount];
+        bool modified[kFieldCount];
         void* vanillaFlash;
+        bool modifiedFlash;
         size_t usableFields;
     };
 
@@ -172,6 +174,7 @@ namespace
         DefSlot* slot = &g_defs[g_defCount++];
         slot->def = def;
         slot->usableFields = 0;
+        slot->modifiedFlash = false;
 
         auto* base = static_cast<unsigned char*>(def);
         for (size_t i = 0; i < kFieldCount; ++i)
@@ -179,6 +182,7 @@ namespace
             const float value = *reinterpret_cast<float*>(base + kFields[i].offset);
             slot->vanilla[i] = value;
             slot->fieldOk[i] = PlausibleValue(value);
+            slot->modified[i] = false;
             if (slot->fieldOk[i])
                 ++slot->usableFields;
         }
@@ -224,6 +228,11 @@ namespace
         float kick;
         float accuracy;
         float bloom;
+
+        bool Neutral() const
+        {
+            return kick >= 0.999f && accuracy >= 0.999f && bloom >= 0.999f;
+        }
     };
 
     // Scales the fields this object exposes. Offsets whose original value does
@@ -248,31 +257,65 @@ namespace
             else if (kFields[i].group == Group::Bloom)
                 strength = strengths.bloom;
 
-            const float wanted = slot->vanilla[i] * std::clamp(strength, 0.0f, 1.0f);
+            const float vanilla = slot->vanilla[i];
             auto* value = reinterpret_cast<float*>(base + kFields[i].offset);
-            if (std::fabs(*value - wanted) > 0.0005f)
+            if (strength < 0.999f)
             {
-                if (logging)
+                const float wanted = vanilla * std::clamp(strength, 0.0f, 1.0f);
+                if (std::fabs(*value - wanted) > 0.0005f)
                 {
-                    LogF(L"weapon: %S %S %p +0x%03zX %.3f -> %.3f", name, label, target,
-                         kFields[i].offset, *value, wanted);
+                    if (logging)
+                    {
+                        LogF(L"weapon: %S %S %p +0x%03zX %.3f -> %.3f", name, label, target,
+                             kFields[i].offset, *value, wanted);
+                    }
+                    *value = wanted;
+                    slot->modified[i] = true;
                 }
-                *value = wanted;
+            }
+            else if (slot->modified[i])
+            {
+                if (std::fabs(*value - vanilla) > 0.0005f)
+                {
+                    if (logging)
+                    {
+                        LogF(L"weapon: %S %S %p +0x%03zX restore %.3f -> %.3f", name, label,
+                             target, kFields[i].offset, *value, vanilla);
+                    }
+                    *value = vanilla;
+                }
+                slot->modified[i] = false;
             }
         }
 
         // Nulling the effect is the only lever for the muzzle flash: there is no
         // dvar for it and no separate smoke slot to switch independently. Only
-        // the WeaponDef carries effect pointers.
+        // the WeaponDef carries effect pointers. Restore it once when the flash
+        // is turned back on, then leave the field alone.
         if (withFlash)
         {
-            void* wantedFlash = g_flashEnabled.load(std::memory_order_relaxed) ? slot->vanillaFlash : nullptr;
+            const bool flashEnabled = g_flashEnabled.load(std::memory_order_relaxed);
             auto* flashSlot = reinterpret_cast<void**>(base + kFlashEffect);
-            if (*flashSlot != wantedFlash)
+            if (!flashEnabled)
             {
-                if (logging)
-                    LogF(L"weapon: %S flash %p -> %p", name, *flashSlot, wantedFlash);
-                *flashSlot = wantedFlash;
+                if (*flashSlot != nullptr)
+                {
+                    if (logging)
+                        LogF(L"weapon: %S flash %p -> null", name, *flashSlot);
+                    *flashSlot = nullptr;
+                    slot->modifiedFlash = true;
+                }
+            }
+            else if (slot->modifiedFlash)
+            {
+                if (*flashSlot != slot->vanillaFlash)
+                {
+                    if (logging)
+                        LogF(L"weapon: %S flash restore %p -> %p", name, *flashSlot,
+                             slot->vanillaFlash);
+                    *flashSlot = slot->vanillaFlash;
+                }
+                slot->modifiedFlash = false;
             }
         }
     }
@@ -280,7 +323,17 @@ namespace
 
 void weapon::ApplyFromClient(int clientNum)
 {
-    const bool logging = g_log.load(std::memory_order_relaxed);
+    const bool enabled = g_enabled.load(std::memory_order_relaxed);
+    const bool spreadOn = g_spreadEnabled.load(std::memory_order_relaxed);
+    const Strengths strengths{
+        enabled ? g_strength.load(std::memory_order_relaxed) : 1.0f,
+        spreadOn ? 1.0f - g_spreadAccuracy.load(std::memory_order_relaxed) : 1.0f,
+        spreadOn ? 1.0f - g_spreadBloom.load(std::memory_order_relaxed) : 1.0f,
+    };
+    const bool neutral = strengths.Neutral() && g_flashEnabled.load(std::memory_order_relaxed);
+    // At stock values there is nothing to change. Keep the diagnostic reads
+    // quiet as well so no log file is opened from the weapon FOV path.
+    const bool logging = g_log.load(std::memory_order_relaxed) && !neutral;
 
     if (clientNum < 0 || clientNum >= kMaxClients)
     {
@@ -340,14 +393,6 @@ void weapon::ApplyFromClient(int clientNum)
     void* weaponDef = *reinterpret_cast<void* const*>(static_cast<char*>(def) + kWeaponDefPointer);
     if (!weaponDef)
         return;
-
-    const bool enabled = g_enabled.load(std::memory_order_relaxed);
-    const bool spreadOn = g_spreadEnabled.load(std::memory_order_relaxed);
-    const Strengths strengths{
-        enabled ? g_strength.load(std::memory_order_relaxed) : 1.0f,
-        spreadOn ? 1.0f - g_spreadAccuracy.load(std::memory_order_relaxed) : 1.0f,
-        spreadOn ? 1.0f - g_spreadBloom.load(std::memory_order_relaxed) : 1.0f,
-    };
 
     ApplyToTarget(weaponDef, name, "def", true, strengths, logging);
 
