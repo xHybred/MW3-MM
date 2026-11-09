@@ -140,7 +140,7 @@ public static class Presets
         {
             Enabled = true,
             Affected = true,
-            Fov = 105f,
+            Fov = 115f,
 
             AimEnabled = true,
             AimFlat = false,
