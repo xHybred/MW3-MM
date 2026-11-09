@@ -1,7 +1,7 @@
 ; Build with build-setup.ps1, or run ISCC directly after staging out\installer\app.
 
 #ifndef AppVersion
-  #define AppVersion "0.11.17"
+  #define AppVersion "1.0.0"
 #endif
 
 #ifndef InstallPrivileges

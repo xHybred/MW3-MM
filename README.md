@@ -43,7 +43,8 @@ it. The install folder and your `%LOCALAPPDATA%\MW3Mod` settings stay where they
 
 The default repository is `xHybred/MW3-MM`. Set `MW3MOD_UPDATE_REPO` to `owner/name` to test
 another repository. A release must publish `MW3ModSetup.exe` and `MW3ModSetup.exe.sha256`;
-the build writes both to `out`.
+the build writes both to `out`. Release notes live in `CHANGELOG.md`; the first release
+describes the tool, and later releases list changes as short bullets.
 
 Manual install, if you prefer:
 

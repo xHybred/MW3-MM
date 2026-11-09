@@ -13,7 +13,7 @@
     <Platforms>x64</Platforms>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
-    <Version>0.11.17</Version>
+    <Version>1.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
