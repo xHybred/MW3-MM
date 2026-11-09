@@ -15,6 +15,8 @@
 #include "log.h"
 #include "settings.h"
 
+#define MW3MOD_VERSION "0.11.16"
+
 namespace {
 
 // Fallback pivot when the dvars cannot be read yet: cg_fov's default. The real
@@ -79,7 +81,10 @@ bool ResolveDvars(DvarRef& fovDvar, DvarRef& scaleDvar) {
 }
 
 DWORD WINAPI ModThread(LPVOID) {
-    LogF(L"attached to pid %lu", GetCurrentProcessId());
+    wchar_t exe[MAX_PATH]{};
+    GetModuleFileNameW(nullptr, exe, _countof(exe));
+    LogF(L"MW3Mod %S attached to %s (pid %lu)", MW3MOD_VERSION, exe, GetCurrentProcessId());
+    LogF(L"installing hooks");
     adszoom::Install();
     blur::Install();
     sway::Install();
@@ -87,6 +92,7 @@ DWORD WINAPI ModThread(LPVOID) {
     crosshair::Install();
     overlay::Install();
     spread::Install();
+    LogF(L"hooks installed");
 
     DvarRef fovDvar;
     DvarRef scaleDvar;
@@ -98,12 +104,31 @@ DWORD WINAPI ModThread(LPVOID) {
     ULONGLONG nextFlinchResolve = 0;
     bool crosshairApplied = false;
     ULONGLONG nextCrosshairResolve = 0;
+    bool loggedSettings = false;
 
     // cg_* dvars only exist once a level is running, so keep looking for the
     // whole session instead of giving up on the frontend.
     for (;;) {
         ModSettings settings;
-        if (!LoadSettings(settings)) settings = ModSettings{};
+        const bool loaded = LoadSettings(settings);
+        if (!loaded) settings = ModSettings{};
+        if (!loggedSettings) {
+            LogF(L"settings %s: %s", loaded ? L"loaded" : L"missing", SettingsPath().c_str());
+            LogF(L"settings fov=%.2f affected=%d aim=%d/%.2f flinch=%d/%.2f blur=%d/%.2f recoil=%d/%.2f sway=%d/%.2f spread=%d/%.2f/%.2f/%.2f viewmodel=%d/%.2f/%.2f/%.2f crosshair=%d/%.2f/%.2f/style=%d",
+                 settings.fov, settings.affected ? 1 : 0,
+                 settings.aimEnabled ? 1 : 0, settings.aimZoom,
+                 settings.flinchEnabled ? 1 : 0, settings.flinchStrength,
+                 settings.blurEnabled ? 1 : 0, settings.blurStrength,
+                 settings.recoilEnabled ? 1 : 0, settings.recoilStrength,
+                 settings.swayEnabled ? 1 : 0, settings.swayStrength,
+                 settings.spreadEnabled ? 1 : 0, settings.spreadAccuracy,
+                 settings.spreadAimAccuracy, settings.spreadBloom,
+                 settings.viewmodelEnabled ? 1 : 0, settings.viewmodelX,
+                 settings.viewmodelZ, settings.viewmodelY,
+                 settings.crosshairEnabled ? 1 : 0, settings.crosshairSize,
+                 settings.crosshairOpacity, settings.crosshairStyle);
+            loggedSettings = true;
+        }
         g_dvarScanVerbose = settings.dvarScanVerbose;
         adszoom::Update(settings, baseline.captured ? baseline.fov : kPivotFov);
         blur::Update(settings);
@@ -210,5 +235,5 @@ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID) {
 // Version marker: the manager greps the file for it to tell this proxy apart
 // from the system X3DAudio1_7.dll it forwards to.
 extern "C" __declspec(dllexport) const char* MW3ModVersion() {
-    return "MW3Mod 0.11.15";
+    return "MW3Mod " MW3MOD_VERSION;
 }

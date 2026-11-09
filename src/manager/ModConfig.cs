@@ -126,7 +126,11 @@ public sealed class ModConfig
 
     public static string SettingsPath => Path.Combine(DataDir, "settings.ini");
 
-    public static string LogPath => Path.Combine(DataDir, "runtime.log");
+    public static string LogDir => Path.Combine(DataDir, "Log");
+
+    public static string RuntimeLogPath => Path.Combine(LogDir, "runtime.log");
+
+    public static string ManagerLogPath => Path.Combine(LogDir, "manager.log");
 
     public static ModConfig Load()
     {

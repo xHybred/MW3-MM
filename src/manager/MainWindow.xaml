@@ -685,6 +685,8 @@
                             <TextBlock Text="About" Style="{StaticResource Section}" />
                             <TextBlock Margin="0,3,0,0" Style="{StaticResource Subtext}"
                                        Text="Settings are written to %LOCALAPPDATA%\MW3Mod\settings.ini and picked up by the game within a second. Nothing is applied until the runtime is installed." />
+                            <TextBlock Margin="0,6,0,0" Style="{StaticResource Subtext}" Opacity="0.7"
+                                       Text="Logs are written to %LOCALAPPDATA%\MW3Mod\Log. Share manager.log and runtime.log when reporting a problem." />
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -694,7 +696,7 @@
         <Border Grid.Row="3" Background="#141719" Padding="24,10">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                    <Button Content="Log" Click="OpenLog_Click" Padding="11,4" />
+                    <Button Content="Logs" Click="OpenLog_Click" Padding="11,4" ToolTip="Open the log folder" />
                     <Button Content="Data folder" Click="OpenFolder_Click" Padding="11,4" Margin="8,0,0,0" />
                 </StackPanel>
                 <TextBlock x:Name="StatusText" Text="Ready" Style="{StaticResource Subtext}"

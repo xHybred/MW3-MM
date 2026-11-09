@@ -8,11 +8,12 @@ namespace {
 
 constexpr unsigned long long kMaxLogBytes = 2ull * 1024 * 1024;
 
-void EnsureDir(const std::wstring& dir) {
-    if (dir.empty()) return;
+bool EnsureDir(const std::wstring& dir) {
+    if (dir.empty()) return false;
     DWORD attr = GetFileAttributesW(dir.c_str());
-    if (attr != INVALID_FILE_ATTRIBUTES && (attr & FILE_ATTRIBUTE_DIRECTORY)) return;
-    CreateDirectoryW(dir.c_str(), nullptr);
+    if (attr != INVALID_FILE_ATTRIBUTES && (attr & FILE_ATTRIBUTE_DIRECTORY)) return true;
+    if (CreateDirectoryW(dir.c_str(), nullptr)) return true;
+    return GetLastError() == ERROR_ALREADY_EXISTS;
 }
 
 std::wstring ReadEnv(const wchar_t* name) {
@@ -45,7 +46,23 @@ std::wstring DataDir() {
 }
 
 std::wstring LogPath() {
-    return DataDir() + L"\\runtime.log";
+    static const std::wstring path = [] {
+        std::wstring root = DataDir();
+        std::wstring legacy = root + L"\\runtime.log";
+        std::wstring dir = root + L"\\Log";
+        if (!EnsureDir(dir)) return legacy;
+
+        std::wstring target = dir + L"\\runtime.log";
+        std::wstring targetOld = target + L".old";
+        if (GetFileAttributesW(target.c_str()) == INVALID_FILE_ATTRIBUTES) {
+            MoveFileW(legacy.c_str(), target.c_str());
+        }
+        if (GetFileAttributesW(targetOld.c_str()) == INVALID_FILE_ATTRIBUTES) {
+            MoveFileW((legacy + L".old").c_str(), targetOld.c_str());
+        }
+        return target;
+    }();
+    return path;
 }
 
 void LogF(const wchar_t* fmt, ...) {
@@ -62,8 +79,8 @@ void LogF(const wchar_t* fmt, ...) {
     va_end(args);
 
     wchar_t line[4096];
-    _snwprintf_s(line, _countof(line), _TRUNCATE, L"[%02u:%02u:%02u.%03u] %s\r\n",
-                 st.wHour, st.wMinute, st.wSecond, st.wMilliseconds, message);
+    _snwprintf_s(line, _countof(line), _TRUNCATE, L"[%04u-%02u-%02u %02u:%02u:%02u.%03u] %s\r\n",
+                 st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds, message);
 
     FILE* file = nullptr;
     if (_wfopen_s(&file, path.c_str(), L"ab") == 0 && file) {

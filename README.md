@@ -133,7 +133,12 @@ apply without a restart.
 | `[Debug] LogEffectiveFov` | log each weapon's aim FOV when it changes |
 | `[Debug] DvarScan` | log every step of the dvar lookup |
 
-Log: `%LOCALAPPDATA%\MW3Mod\runtime.log` (UTF-16).
+Logs: `%LOCALAPPDATA%\MW3Mod\Log`
+
+- `runtime.log` (UTF-16): the game-side trail. It records the runtime version, game exe, settings path, hook setup, and FOV changes.
+- `manager.log` (UTF-8): the manager-side trail. It records the Windows and .NET versions, game folder, installed runtime and renderers, settings saves, install and remove actions, and full exception details.
+
+`settings.ini` stays in `%LOCALAPPDATA%\MW3Mod`, next to the `Log` folder. Logs from earlier builds are kept in `Log\legacy`. Share both current logs when reporting a problem.
 
 ## How it works
 

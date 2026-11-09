@@ -20,6 +20,7 @@ public partial class MainWindow : Window
     private string? _gameDir;
     private bool _loading = true;
     private bool _rendererBusy;
+    private bool _gameWasRunning;
     private long _statusHoldUntil;
 
     private readonly DispatcherTimer _statusTimer = new() { Interval = TimeSpan.FromSeconds(1) };
@@ -30,7 +31,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         _saveTimer.Tick += (_, _) => { _saveTimer.Stop(); SaveConfig(); };
         Loaded += OnLoaded;
-        Closed += (_, _) => { _statusTimer.Stop(); _saveTimer.Stop(); };
+        Closed += (_, _) => { _statusTimer.Stop(); _saveTimer.Stop(); Log.Info("Manager closed."); };
         SourceInitialized += (_, _) => EnableDarkTitleBar();
     }
 
@@ -38,6 +39,20 @@ public partial class MainWindow : Window
     {
         _gameDir = GameLocator.FindGame();
         _config = ModConfig.Load();
+
+        Log.Info("Game folder: " + (_gameDir ?? "not found"));
+        Log.Info("Settings file: " + (File.Exists(ModConfig.SettingsPath) ? "found" : "missing"));
+        Log.Info("Bundled runtime: " + (RuntimeInstaller.BundledVersion ?? "missing"));
+        if (_gameDir is not null)
+        {
+            Log.Info("Installed runtime: " + (RuntimeInstaller.ProxyVersion(_gameDir) ?? "none"));
+            Log.Info("d3d9 wrapper: " + RuntimeInstaller.OwnerName(RuntimeInstaller.Owner(_gameDir)));
+            Log.Info("ReShade: " + RuntimeInstaller.InstalledMode(_gameDir));
+        }
+        else
+        {
+            Log.Warn("Modern Warfare 3 was not found in the usual Steam locations.");
+        }
 
         // config.cfg is what the game reads before its first frame, so when it
         // exists it is the truth about the intro setting, not the ini.
@@ -62,8 +77,18 @@ public partial class MainWindow : Window
 
         if (!File.Exists(ModConfig.SettingsPath))
         {
-            try { _config.Save(); } catch (IOException) { /* the panel still shows defaults */ }
+            try
+            {
+                _config.Save();
+                Log.Info("Default settings written.");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Log.Error("Could not write default settings", ex);
+            }
         }
+
+        Log.Info($"Settings: fov={_config.Fov}, aim={_config.AimZoom}, flinch={_config.FlinchStrength}, blur={_config.BlurStrength}, recoil={_config.RecoilStrength}, sway={_config.SwayStrength}, spread={_config.SpreadAccuracy}/{_config.SpreadAimAccuracy}/{_config.SpreadBloom}, crosshair={_config.CrosshairSize}/{_config.CrosshairOpacity}/{_config.CrosshairStyle}");
 
         BuildPresetBox();
         Refresh();
@@ -71,6 +96,7 @@ public partial class MainWindow : Window
         _statusTimer.Tick += (_, _) => RefreshStatus();
         _statusTimer.Start();
         RefreshStatus();
+        Log.Info("Manager ready.");
     }
 
     /// <summary>Pushes the loaded configuration into every control at once.</summary>
@@ -179,6 +205,7 @@ public partial class MainWindow : Window
         _loading = false;
 
         _saveTimer.Stop();
+        Log.Info("Preset applied: " + preset.Name);
         SaveConfig();
         StatusText.Text = preset.Name + " applied. A running game picks this up within a second.";
         _statusHoldUntil = Environment.TickCount64 + 4000;
@@ -472,6 +499,11 @@ public partial class MainWindow : Window
     private void RefreshStatus()
     {
         bool running = Process.GetProcessesByName("iw5sp").Length > 0;
+        if (running != _gameWasRunning)
+        {
+            Log.Info(running ? "Game started." : "Game stopped.");
+            _gameWasRunning = running;
+        }
         GameDot.Fill = Brush(running ? "Accent" : "Dim");
         GameStateText.Text = running ? "Game running" : "Game not running";
 
@@ -503,6 +535,7 @@ public partial class MainWindow : Window
         if (_gameDir is null) return;
         if (Process.GetProcessesByName("iw5sp").Length > 0)
         {
+            Log.Warn("Skip intro change blocked because the game is running.");
             StatusText.Text = "Close the game first - it rewrites config.cfg when it exits.";
             _statusHoldUntil = Environment.TickCount64 + 4000;
             return;
@@ -511,6 +544,7 @@ public partial class MainWindow : Window
         try
         {
             IntroOption.SetSkip(_gameDir, skip);
+            Log.Info("Skip intro set to " + skip + ".");
             StatusText.Text = skip
                 ? "The next launch goes straight to the main menu."
                 : "The opening movie will play again.";
@@ -518,6 +552,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Error("Could not edit config.cfg", ex);
             StatusText.Text = "Could not edit config.cfg: " + ex.Message;
             _statusHoldUntil = Environment.TickCount64 + 4000;
         }
@@ -712,11 +747,13 @@ public partial class MainWindow : Window
         try
         {
             _config.Save();
+            Log.Info("Settings saved.");
             StatusText.Text = "Saved. A running game picks this up within a second.";
             RefreshPresetBox();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Error("Could not write settings", ex);
             StatusText.Text = "Could not write settings: " + ex.Message;
         }
     }
@@ -734,6 +771,7 @@ public partial class MainWindow : Window
 
         if (!GameLocator.IsGameFolder(dialog.FolderName))
         {
+            Log.Warn("Rejected game folder: " + dialog.FolderName);
             MessageBox.Show(this,
                 "That folder does not contain " + GameLocator.ExeName + ".",
                 "MW3 Mod Manager", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -741,6 +779,7 @@ public partial class MainWindow : Window
         }
 
         _gameDir = dialog.FolderName;
+        Log.Info("Game folder set to " + _gameDir + ".");
         Refresh();
     }
 
@@ -751,14 +790,18 @@ public partial class MainWindow : Window
 
         try
         {
-            if (RuntimeInstaller.ProxyVersion(_gameDir) is not null)
+            bool installed = RuntimeInstaller.ProxyVersion(_gameDir) is not null;
+            Log.Info(installed ? "Runtime remove requested." : "Runtime install requested.");
+            if (installed)
             {
                 RuntimeInstaller.RemoveProxy(_gameDir);
+                Log.Info("Runtime removed.");
                 StatusText.Text = "Runtime removed. The game is back to vanilla FOV.";
             }
             else
             {
                 RuntimeInstaller.InstallProxy(_gameDir);
+                Log.Info("Runtime installed: " + (RuntimeInstaller.ProxyVersion(_gameDir) ?? "unknown") + ".");
                 StatusText.Text = "Runtime installed. Start the game however you like.";
             }
         }
@@ -780,7 +823,9 @@ public partial class MainWindow : Window
         {
             try
             {
+                Log.Info("DXVK remove requested.");
                 RuntimeInstaller.RemoveDxvk(_gameDir);
+                Log.Info("DXVK removed.");
                 StatusText.Text = "DXVK removed. The game is back on D3D9.";
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -802,6 +847,7 @@ public partial class MainWindow : Window
 
             StatusText.Text = "Looking up the latest DXVK release...";
             var release = await DxvkDownloader.FindLatestAsync(http, CancellationToken.None);
+            Log.Info("DXVK download: " + release.Tag + ".");
 
             string folder = Path.Combine(work, "dxvk-" + release.Tag);
             var progress = new Progress<double>(fraction =>
@@ -811,6 +857,7 @@ public partial class MainWindow : Window
                 http, release, folder, progress, CancellationToken.None);
 
             RuntimeInstaller.InstallDxvk(_gameDir, dll);
+            Log.Info("DXVK installed: " + release.Tag + ".");
             StatusText.Text = $"DXVK {release.Tag} installed. Start the game to render through Vulkan.";
 
             try { Directory.Delete(folder, recursive: true); } catch (IOException) { }
@@ -842,7 +889,9 @@ public partial class MainWindow : Window
 
         try
         {
+            Log.Info("Installing DXVK from " + dialog.FileName + ".");
             RuntimeInstaller.InstallDxvk(_gameDir, dialog.FileName);
+            Log.Info("DXVK installed from file.");
             StatusText.Text = "DXVK installed as d3d9.dll.";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
@@ -863,7 +912,9 @@ public partial class MainWindow : Window
         {
             try
             {
+                Log.Info("Direct3D 11 remove requested.");
                 RuntimeInstaller.RemoveD3d11(_gameDir);
+                Log.Info("Direct3D 11 wrapper removed.");
                 StatusText.Text = "Direct3D 11 wrapper removed. The game is back on Direct3D 9.";
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -880,6 +931,7 @@ public partial class MainWindow : Window
         var taken = RuntimeInstaller.Owner(_gameDir);
         if (taken != RuntimeInstaller.D3d9Owner.Nobody)
         {
+            Log.Warn("Direct3D 11 blocked: d3d9.dll is owned by " + RuntimeInstaller.OwnerName(taken) + ".");
             StatusText.Text = $"d3d9.dll is taken by {RuntimeInstaller.OwnerName(taken)}. Remove it first.";
             _statusHoldUntil = Environment.TickCount64 + 4000;
             return;
@@ -895,6 +947,7 @@ public partial class MainWindow : Window
 
             StatusText.Text = "Looking up the latest dgVoodoo release...";
             var release = await DgVoodooDownloader.FindLatestAsync(http, CancellationToken.None);
+            Log.Info("dgVoodoo download: " + release.Tag + ".");
 
             string folder = Path.Combine(work, "dgvoodoo-" + release.Tag);
             var progress = new Progress<double>(fraction =>
@@ -904,6 +957,7 @@ public partial class MainWindow : Window
                 http, release, folder, progress, CancellationToken.None);
 
             RuntimeInstaller.InstallD3d11(_gameDir, payload.Dll, payload.Conf);
+            Log.Info("dgVoodoo installed: " + release.Tag + ".");
             StatusText.Text = $"dgVoodoo {release.Tag} installed. Start the game to render through Direct3D 11.";
 
             try { Directory.Delete(folder, recursive: true); } catch (IOException) { }
@@ -941,7 +995,9 @@ public partial class MainWindow : Window
                 ? null
                 : Path.Combine(Path.GetDirectoryName(folder) ?? folder, RuntimeInstaller.DgVoodooConfName);
 
+            Log.Info("Installing dgVoodoo from " + dialog.FileName + ".");
             RuntimeInstaller.InstallD3d11(_gameDir, dialog.FileName, conf);
+            Log.Info("dgVoodoo installed from file.");
             StatusText.Text = "dgVoodoo installed as d3d9.dll.";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
@@ -961,12 +1017,15 @@ public partial class MainWindow : Window
         {
             if (RuntimeInstaller.InstalledMode(_gameDir) != RuntimeInstaller.ReShadeMode.None)
             {
+                Log.Info("ReShade remove requested.");
                 RuntimeInstaller.RemoveReShade(_gameDir);
+                Log.Info("ReShade removed; presets and shaders kept.");
                 StatusText.Text = "ReShade removed. Its presets and shaders are still in the game folder.";
             }
             else
             {
                 var target = RuntimeInstaller.InstallReShade(_gameDir);
+                Log.Info("ReShade installed as " + (target == RuntimeInstaller.ReShadeMode.Direct3D11 ? "dxgi.dll" : "d3d9.dll") + ".");
                 StatusText.Text = target == RuntimeInstaller.ReShadeMode.Direct3D11
                     ? "ReShade installed as dxgi.dll. Start the game and press your ReShade overlay key."
                     : "ReShade installed as d3d9.dll. Start the game and press your ReShade overlay key.";
@@ -985,6 +1044,7 @@ public partial class MainWindow : Window
     {
         if (Process.GetProcessesByName("iw5sp").Length == 0) return false;
 
+        Log.Warn("Operation blocked because iw5sp.exe is running.");
         MessageBox.Show(this,
             "Close Modern Warfare 3 first - it holds the files open while it runs.",
             "MW3 Mod Manager", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -993,11 +1053,12 @@ public partial class MainWindow : Window
 
     private void Fail(string title, Exception ex)
     {
+        Log.Error(title, ex);
         StatusText.Text = ex.Message;
         MessageBox.Show(this, ex.Message, title, MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
-    private void OpenLog_Click(object sender, RoutedEventArgs e) => OpenPath(ModConfig.LogPath);
+    private void OpenLog_Click(object sender, RoutedEventArgs e) => OpenPath(ModConfig.LogDir);
 
     private void OpenFolder_Click(object sender, RoutedEventArgs e) => OpenPath(ModConfig.DataDir);
 
@@ -1019,7 +1080,7 @@ public partial class MainWindow : Window
     // with a sharing mode and drop a partial line from the cut point.
     private static string? LastLogLine()
     {
-        string path = ModConfig.LogPath;
+        string path = ModConfig.RuntimeLogPath;
         try
         {
             if (!File.Exists(path)) return null;
