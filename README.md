@@ -212,8 +212,11 @@ per-shot add, so the first shot keeps the weapon's own resting accuracy and late
 it. Aiming has its own field too: `adsSpread` (a float at +0x764 in the weapon definition) is a single
 fixed cone rather than one that grows with fire. That field is read in exactly one place, the query at
 `iw5sp.exe+0x221F0` that returns the cone the game reports for the weapon in hand, so the Aim cone slider
-scales that query's result instead of the stored float. Every reader of the field therefore sees the
-shrunk cone, on every weapon and scope.
+scales that query's result instead of the stored float. That query is what the fire path asks for on an
+aimed shot: measured on the ACR, the cone handed to the pellet randomiser is 0.120 deg at Aim cone 0 and
+0.000 deg at Aim cone 100%, so the slider really does decide where an aimed bullet can go. The runtime
+also logs that per-shot cone while `[Debug] Spread` is on, which is how the two values were compared.
+Every reader of the field therefore sees the shrunk cone, on every weapon and scope.
 
 The viewmodel cannot have its own field of view. A probe on the D3D9 device showed the game never
 calls `SetTransform(D3DTS_PROJECTION)` and draws the first-person model with the same projection as
