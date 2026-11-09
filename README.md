@@ -11,11 +11,11 @@ the game from Steam, a shortcut, or a launcher.
 
 ## Install
 
-Run `out\MW3ModSetup.exe` and install it to `C:\Program Files\Hybred Tools`. The setup
-adds a Start Menu shortcut and an uninstaller in Windows Settings. Launch **MW3 Mod
-Manager** from the Start Menu. It finds the Steam install on its own (Browse if it does
-not). Open the **Setup** tab, press **Install** in the Runtime row, then set your FOV on
-the **Aim** tab.
+Run `out\MW3ModSetup.exe`. It installs to
+`C:\Program Files\Hybred Tools\MW3 Mod Manager`. The setup adds a Start Menu shortcut and
+an uninstaller in Windows Settings. Launch **MW3 Mod Manager** from the Start Menu. It
+finds the Steam install on its own (Browse if it does not). Open the **Setup** tab, press
+**Install** in the Runtime row, then set your FOV on the **Aim** tab.
 
 The manager only writes files and settings; it does not need to stay running and does not
 need to launch the game. The game loads the mod on every start.
@@ -283,7 +283,7 @@ To build the installer, run:
 
 It builds the runtime, publishes a self-contained manager (no .NET runtime needed on the
 target machine), stages the ReShade assets, and writes `out\MW3ModSetup.exe`. The setup
-installs to `C:\Program Files\Hybred Tools` and adds an uninstaller.
+installs to `C:\Program Files\Hybred Tools\MW3 Mod Manager` and adds an uninstaller.
 
 ## Notes and limits
 
