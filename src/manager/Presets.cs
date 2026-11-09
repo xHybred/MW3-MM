@@ -111,10 +111,10 @@ public static class Presets
             AimFlat = false,
             AimZoom = 1.07f,
 
-            FlinchStrength = 0.4f,
+            FlinchStrength = 0.2f,
             BlurStrength = 0f,
             RecoilStrength = 0.4f,
-            SwayStrength = 0f,
+            SwayStrength = 0.07f,
             FlashEnabled = false,
             SpreadAccuracy = 1.0f,
             SpreadAimAccuracy = 1.0f,
