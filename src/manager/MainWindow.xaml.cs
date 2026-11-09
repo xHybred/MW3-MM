@@ -968,8 +968,8 @@ public partial class MainWindow : Window
             {
                 var target = RuntimeInstaller.InstallReShade(_gameDir);
                 StatusText.Text = target == RuntimeInstaller.ReShadeMode.Direct3D11
-                    ? "ReShade installed as dxgi.dll. Start the game and press Home for its overlay."
-                    : "ReShade installed as d3d9.dll. Start the game and press Home for its overlay.";
+                    ? "ReShade installed as dxgi.dll. Start the game and press your ReShade overlay key."
+                    : "ReShade installed as d3d9.dll. Start the game and press your ReShade overlay key.";
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException

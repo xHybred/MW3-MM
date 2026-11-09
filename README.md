@@ -283,8 +283,9 @@ Output: `out\MW3Mod.dll` and `out\manager\`. The runtime alone is `.\build.ps1`.
   `ShaderToggler` addon. It installs as `d3d9.dll` for native Direct3D 9, or as `dxgi.dll`
   next to dgVoodoo when the Direct3D 11 wrapper is active. The manager moves it
   automatically when the wrapper is added or removed, and keeps any `ReShade.ini`, preset
-  or shader file already in the game folder. Home opens the ReShade overlay. ReShade
-  cannot share `d3d9.dll` with DXVK, so remove it before installing DXVK; running both
+  or shader file already in the game folder. The overlay key is the one set in
+  `ReShade.ini`. ReShade cannot share `d3d9.dll` with DXVK, so remove it before installing
+  DXVK; running both
   needs ReShade's Vulkan install, which the manager does not set up.
 - dgVoodoo 2 ships a configuration that reports 256 MB of video memory, and with that the
   game renders a mission but never starts it: the loading card stays on screen and the
