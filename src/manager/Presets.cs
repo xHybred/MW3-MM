@@ -109,7 +109,7 @@ public static class Presets
 
             AimEnabled = true,
             AimFlat = false,
-            AimZoom = 1.07f,
+            AimZoom = 1.04f,
 
             FlinchStrength = 0.2f,
             BlurStrength = 0f,
