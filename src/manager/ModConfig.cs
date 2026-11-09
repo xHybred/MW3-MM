@@ -50,6 +50,7 @@ public sealed class ModConfig
     public float CrosshairOpacity { get; set; } = 1.0f;
     public bool CrosshairDynamic { get; set; }
     public bool CrosshairShow { get; set; } = true;
+    public bool CrosshairAlwaysShow { get; set; }
     public int CrosshairStyle { get; set; }
     public bool CrosshairDebug { get; set; }
     public bool SkipIntro { get; set; }
@@ -90,6 +91,7 @@ public sealed class ModConfig
         CrosshairOpacity = other.CrosshairOpacity;
         CrosshairDynamic = other.CrosshairDynamic;
         CrosshairShow = other.CrosshairShow;
+        CrosshairAlwaysShow = other.CrosshairAlwaysShow;
         CrosshairStyle = other.CrosshairStyle;
     }
 
@@ -123,6 +125,7 @@ public sealed class ModConfig
                Same(CrosshairOpacity, other.CrosshairOpacity) &&
                CrosshairDynamic == other.CrosshairDynamic &&
                CrosshairShow == other.CrosshairShow &&
+               CrosshairAlwaysShow == other.CrosshairAlwaysShow &&
                CrosshairStyle == other.CrosshairStyle;
     }
 
@@ -286,6 +289,7 @@ public sealed class ModConfig
                         break;
                     case "dynamic": config.CrosshairDynamic = ParseBool(value, config.CrosshairDynamic); break;
                     case "show": config.CrosshairShow = ParseBool(value, config.CrosshairShow); break;
+                    case "alwaysshow": config.CrosshairAlwaysShow = ParseBool(value, config.CrosshairAlwaysShow); break;
                     case "style":
                         if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int style))
                             config.CrosshairStyle = Math.Clamp(style, 0, 2);
@@ -374,6 +378,7 @@ public sealed class ModConfig
             "Opacity=" + CrosshairOpacity.ToString("0.###", CultureInfo.InvariantCulture),
             $"Dynamic={(CrosshairDynamic ? 1 : 0)}",
             $"Show={(CrosshairShow ? 1 : 0)}",
+            $"AlwaysShow={(CrosshairAlwaysShow ? 1 : 0)}",
             $"Style={CrosshairStyle}",
             "",
             "[Startup]",

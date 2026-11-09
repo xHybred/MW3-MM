@@ -509,6 +509,17 @@
                                 </DockPanel>
 
                                 <DockPanel Margin="0,16,0,0">
+                                    <CheckBox x:Name="CrosshairAlwaysShowSwitch" DockPanel.Dock="Right" Content="On"
+                                              Style="{StaticResource Switch}" VerticalAlignment="Center"
+                                              Checked="CrosshairAlwaysShow_Changed" Unchecked="CrosshairAlwaysShow_Changed" />
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Always show" Style="{StaticResource Subtext}" />
+                                        <TextBlock Text="Keeps the Sharp or Halo crosshair visible while aiming down sights."
+                                                   Style="{StaticResource Subtext}" Opacity="0.7" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                </DockPanel>
+
+                                <DockPanel Margin="0,16,0,0">
                                     <CheckBox x:Name="CrosshairDynamicSwitch" DockPanel.Dock="Right" Content="On"
                                               Style="{StaticResource Switch}" VerticalAlignment="Center"
                                               Checked="CrosshairDynamic_Changed" Unchecked="CrosshairDynamic_Changed" />

@@ -162,6 +162,7 @@ apply without a restart.
 | `[Crosshair] Opacity` | 0..1, how solid the crosshair is. 1 = stock |
 | `[Crosshair] Dynamic` | 1 lets the crosshair open up with your spread, 0 keeps it fixed |
 | `[Crosshair] Show` | 0 hides the crosshair entirely |
+| `[Crosshair] AlwaysShow` | 1 keeps the Sharp or Halo crosshair visible while aiming down sights, 0 lets it hide while aiming |
 | `[Crosshair] Style` | 0 draws the game's own crosshair, 1 the same bars drawn by the mod, 2 a Halo-style ring |
 | `[Startup] SkipIntro` | 1 launches straight to the main menu, 0 plays the opening movie. The manager writes this into `players2\config.cfg` |
 | `[Update] CheckOnLaunch` | 1 checks GitHub Releases when the manager starts, 0 leaves it to the Check now button |

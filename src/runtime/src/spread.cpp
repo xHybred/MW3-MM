@@ -9,6 +9,7 @@
 #include <intrin.h>
 
 #include "log.h"
+#include "overlay.h"
 #include "settings.h"
 
 #include <MinHook.h>
@@ -107,6 +108,7 @@ namespace
 
     float HookedAdsSpread(int clientNum, bool viaSlot)
     {
+        overlay::MarkAiming();
         const float vanilla = g_original(clientNum, viaSlot);
 
         float result = vanilla;

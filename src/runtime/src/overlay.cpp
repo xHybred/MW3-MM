@@ -25,6 +25,8 @@ std::atomic<float> g_size{1.0f};
 std::atomic<float> g_alpha{1.0f};
 std::atomic<float> g_verticalOffset{0.0f};
 std::atomic<ULONGLONG> g_engineDrewAt{0};
+std::atomic<ULONGLONG> g_aimingAt{0};
+std::atomic<bool> g_alwaysShow{false};
 std::atomic<unsigned int> g_color{0xFFFFFFFFu};
 std::atomic<bool> g_frameTime{false};
 
@@ -207,8 +209,13 @@ void DrawOverlay(IDirect3DDevice9* device) {
     if (!g_enabled.load(std::memory_order_relaxed)) return;
     if (g_style.load(std::memory_order_relaxed) == 0) return;
 
+    const ULONGLONG now = GetTickCount64();
     const ULONGLONG drew = g_engineDrewAt.load(std::memory_order_relaxed);
-    if (drew == 0 || GetTickCount64() - drew > 250) return;
+    const ULONGLONG aimed = g_aimingAt.load(std::memory_order_relaxed);
+    const bool engineDrew = drew != 0 && now - drew <= 250;
+    const bool aiming = g_alwaysShow.load(std::memory_order_relaxed) && aimed != 0 &&
+                        now - aimed <= 250;
+    if (!engineDrew && !aiming) return;
 
     D3DVIEWPORT9 vp{};
     if (FAILED(device->GetViewport(&vp)) || vp.Width == 0 || vp.Height == 0) return;
@@ -362,6 +369,10 @@ void MarkEngineCrosshair() {
     g_engineDrewAt.store(GetTickCount64(), std::memory_order_relaxed);
 }
 
+void MarkAiming() {
+    g_aimingAt.store(GetTickCount64(), std::memory_order_relaxed);
+}
+
 void SetColor(float r, float g, float b, float a) {
     auto channel = [](float v) {
         if (!(v > 0.0f)) return 0u;
@@ -403,6 +414,7 @@ bool Install() {
 
 void Update(const ModSettings& settings) {
     g_enabled.store(settings.crosshairEnabled, std::memory_order_relaxed);
+    g_alwaysShow.store(settings.crosshairAlwaysShow, std::memory_order_relaxed);
     g_frameTime.store(settings.frameTimeDebug, std::memory_order_relaxed);
     g_style.store(settings.crosshairStyle, std::memory_order_relaxed);
     g_size.store(settings.crosshairSize, std::memory_order_relaxed);

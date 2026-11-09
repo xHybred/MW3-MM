@@ -130,6 +130,7 @@ public static class Presets
             CrosshairOpacity = 0.85f,
             CrosshairDynamic = false,
             CrosshairShow = true,
+            CrosshairAlwaysShow = true,
             CrosshairStyle = 2,
         });
 
@@ -165,7 +166,8 @@ public static class Presets
             CrosshairOpacity = 0.85f,
             CrosshairDynamic = false,
             CrosshairShow = true,
-            CrosshairStyle = 0,
+            CrosshairAlwaysShow = true,
+            CrosshairStyle = 1,
         });
 
     public static IReadOnlyList<Preset> All { get; } = new[] { Default, Recommended, Halo, Bodycam };

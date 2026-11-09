@@ -4,6 +4,7 @@
 
 - Fixed hit registration at stock settings by skipping neutral weapon-state writes and removing the diagnostic bullet and RNG hooks from release builds.
 - Stock settings no longer write weapon fields or open the runtime log from the shot path.
+- Added an Always show option for the Sharp and Halo crosshairs. Bodycam now uses Sharp, and Halo and Bodycam enable the option.
 
 ## 1.0.1
 

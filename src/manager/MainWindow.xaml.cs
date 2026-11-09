@@ -137,6 +137,7 @@ public partial class MainWindow : Window
         CrosshairSizeSlider.Value = Math.Clamp(_config.CrosshairSize * 100f, 50f, 200f);
         CrosshairOpacitySlider.Value = Math.Clamp(_config.CrosshairOpacity * 100f, 0f, 100f);
         CrosshairShowSwitch.IsChecked = _config.CrosshairShow;
+        CrosshairAlwaysShowSwitch.IsChecked = _config.CrosshairAlwaysShow;
         CrosshairDynamicSwitch.IsChecked = _config.CrosshairDynamic;
         CrosshairSwitch.IsChecked = _config.CrosshairEnabled;
         AutoUpdateSwitch.IsChecked = _config.CheckOnLaunch;
@@ -507,6 +508,7 @@ public partial class MainWindow : Window
         SetSwitchLabel(ViewmodelSwitch, _config.ViewmodelEnabled);
         SetSwitchLabel(CrosshairSwitch, _config.CrosshairEnabled);
         SetSwitchLabel(CrosshairShowSwitch, _config.CrosshairShow);
+        SetSwitchLabel(CrosshairAlwaysShowSwitch, _config.CrosshairAlwaysShow);
         SetSwitchLabel(CrosshairDynamicSwitch, _config.CrosshairDynamic);
     }
 
@@ -693,6 +695,14 @@ public partial class MainWindow : Window
     {
         if (_loading) return;
         _config.CrosshairShow = CrosshairShowSwitch.IsChecked == true;
+        UpdateFovUi();
+        SaveLater();
+    }
+
+    private void CrosshairAlwaysShow_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        _config.CrosshairAlwaysShow = CrosshairAlwaysShowSwitch.IsChecked == true;
         UpdateFovUi();
         SaveLater();
     }

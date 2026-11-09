@@ -71,6 +71,8 @@ bool LoadSettings(ModSettings& out) {
     out.crosshairOpacity = Clamp01(ReadFloatKey(path, L"Crosshair", L"Opacity", 1.0f));
     out.crosshairDynamic = GetPrivateProfileIntW(L"Crosshair", L"Dynamic", 0, path.c_str()) != 0;
     out.crosshairShow = GetPrivateProfileIntW(L"Crosshair", L"Show", 1, path.c_str()) != 0;
+    out.crosshairAlwaysShow =
+        GetPrivateProfileIntW(L"Crosshair", L"AlwaysShow", 0, path.c_str()) != 0;
     out.crosshairStyle = GetPrivateProfileIntW(L"Crosshair", L"Style", 0, path.c_str());
     if (out.crosshairStyle < 0) out.crosshairStyle = 0;
     if (out.crosshairStyle > 2) out.crosshairStyle = 2;
