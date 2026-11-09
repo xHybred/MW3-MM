@@ -13,6 +13,7 @@ add_library(mw3mod SHARED
     src/sway.cpp
     src/viewmodel.cpp
     src/weapon.cpp
+    src/spread.cpp
     src/dvar.cpp
     src/flinch.cpp
     src/log.cpp

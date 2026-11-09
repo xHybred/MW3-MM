@@ -210,9 +210,10 @@ works out the cone, so the runtime scales them in place: the Hipfire cone slider
 values, and with the max at zero the cone cannot grow either; the Bloom slider scales only the
 per-shot add, so the first shot keeps the weapon's own resting accuracy and later shots stop widening
 it. Aiming has its own field too: `adsSpread` (a float at +0x764 in the weapon definition) is a single
-fixed cone the bullet is randomised inside while aimed, not a spread that grows with fire, which is why
-waiting for the gun to settle never tightened it. The Aim cone slider scales that field on every weapon
-and scope, so aimed shots land on the sight.
+fixed cone rather than one that grows with fire. That field is read in exactly one place, the query at
+`iw5sp.exe+0x221F0` that returns the cone the game reports for the weapon in hand, so the Aim cone slider
+scales that query's result instead of the stored float. Every reader of the field therefore sees the
+shrunk cone, on every weapon and scope.
 
 The viewmodel cannot have its own field of view. A probe on the D3D9 device showed the game never
 calls `SetTransform(D3DTS_PROJECTION)` and draws the first-person model with the same projection as
