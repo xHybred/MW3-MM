@@ -121,13 +121,13 @@
                                            VerticalAlignment="Center" />
                             </Grid>
 
-                            <Slider x:Name="FovSlider" Grid.Row="2" Minimum="60" Maximum="130"
+                            <Slider x:Name="FovSlider" Grid.Row="2" Minimum="40" Maximum="130"
                                     TickFrequency="1" IsSnapToTickEnabled="True"
                                     Style="{StaticResource Slider}" VerticalAlignment="Center"
                                     Margin="0,8,0,0" ValueChanged="FovSlider_ValueChanged" />
                             <DockPanel Grid.Row="3" Margin="0,2,0,0">
                                 <TextBlock DockPanel.Dock="Right" Text="130" Style="{StaticResource EndLabel}" />
-                                <TextBlock Text="60" Style="{StaticResource EndLabel}" />
+                                <TextBlock Text="40" Style="{StaticResource EndLabel}" />
                             </DockPanel>
 
                             <CheckBox x:Name="AffectedSwitch" Grid.Row="4" Margin="0,16,0,0"

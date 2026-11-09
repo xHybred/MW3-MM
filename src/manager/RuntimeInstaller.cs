@@ -39,7 +39,12 @@ public static class RuntimeInstaller
         if (!File.Exists(BundlePath))
             throw new FileNotFoundException("MW3Mod.dll is missing next to the manager.", BundlePath);
 
-        File.Copy(BundlePath, Path.Combine(gameDir, ProxyName), overwrite: true);
+        string target = Path.Combine(gameDir, ProxyName);
+        if (File.Exists(target) && ReadVersionString(target, "MW3Mod ") is null)
+            throw new InvalidOperationException(
+                "The game's " + ProxyName + " belongs to another program. Remove it yourself if you want to replace it.");
+
+        File.Copy(BundlePath, target, overwrite: true);
         return true;
     }
 
@@ -366,8 +371,6 @@ public static class RuntimeInstaller
     {
         CopyIfMissing(Path.Combine(ReShadeAssetsDir, "ReShade.ini"),
                       Path.Combine(gameDir, "ReShade.ini"));
-        CopyIfMissing(Path.Combine(ReShadeAssetsDir, "ReShadePreset.ini"),
-                      Path.Combine(gameDir, "ReShadePreset.ini"));
         CopyIfMissing(Path.Combine(ReShadeAssetsDir, "ShaderToggler.addon64"),
                       Path.Combine(gameDir, "ShaderToggler.addon64"));
 

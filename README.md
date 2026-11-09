@@ -1,7 +1,10 @@
-# MW3 FOV Mod
+# MW3 Mod Manager
 
-Field of view override for Call of Duty: Modern Warfare 3 (2011) single player, with an
-option that makes aiming down sights widen along with your FOV.
+Quality-of-life mod manager for the single-player campaign of Call of Duty: Modern Warfare 3
+(2011). It installs a small proxy runtime that widens the FOV, scales aim-down-sights zoom,
+and adjusts flinch, hit blur, recoil, sway, muzzle flash, spread, viewmodel offsets and the
+crosshair. The same window installs ReShade with presets and shaders, optional DXVK or
+dgVoodoo renderers, and manages skip-intro, logs and in-app updates.
 
 Vanilla MW3 renders ADS at a fixed 40 degrees no matter what `cg_fov` is set to, so a 1x
 sight feels over-zoomed as soon as you raise your hipfire FOV. This applies the same
@@ -11,17 +14,27 @@ the game from Steam, a shortcut, or a launcher.
 
 ## Install
 
-Run `out\MW3ModSetup.exe`. It installs to
-`C:\Program Files\Hybred Tools\MW3 Mod Manager`. The setup adds a Start Menu shortcut and
-an uninstaller in Windows Settings. Launch **MW3 Mod Manager** from the Start Menu. It
-finds the Steam install on its own (Browse if it does not). Open the **Setup** tab, press
-**Install** in the Runtime row, then set your FOV on the **Aim** tab.
+1. Download `MW3ModSetup.exe` from
+   [the latest release](https://github.com/xHybred/MW3-MM/releases/latest). The release also
+   publishes `MW3ModSetup.exe.sha256`.
+2. Optional: verify the download in PowerShell with
+   `Get-FileHash .\MW3ModSetup.exe -Algorithm SHA256`, then compare the result with the
+   `.sha256` file.
+3. Run the setup. It installs to `C:\Program Files\Hybred Tools\MW3 Mod Manager`, adds a
+   Start Menu shortcut, and registers an uninstaller. The setup needs administrator rights.
+4. Launch **MW3 Mod Manager** from the Start Menu. It finds the Steam install on its own
+   (Browse if it does not). Open the **Setup** tab, press **Install** in the Runtime row,
+   then set your FOV on the **Aim** tab.
+
+The setup is not code-signed, so Windows SmartScreen may ask for confirmation. Verify the
+SHA-256 before choosing to run it.
+
+Requirements: 64-bit Windows 10 version 1809 or newer, the Steam version of Call of Duty:
+Modern Warfare 3 (2011), and an x64 processor. The setup is self-contained and does not need
+a separate .NET install.
 
 The manager only writes files and settings; it does not need to stay running and does not
 need to launch the game. The game loads the mod on every start.
-
-To run the manager without installing it, use `out\manager\MW3ModManager.exe` from a
-build.
 
 The setup only installs the manager. The mod itself is installed into the game from the
 manager. Uninstalling the manager leaves the mod in the game and your settings in
@@ -30,23 +43,25 @@ uninstall.
 
 Settings are grouped into tabs, and the preset list at the right of the tab bar applies a whole
 configuration at once: **Default** puts every value back to stock, **Recommended** is a tuned
-starting point, **Halo** adds the ring crosshair, and **Bodycam** is the pulled-in, perfect
+starting point, **Halo** adds the ring crosshair, and **Bodycam** is the pushed-out, perfect
 hipfire look. Change anything afterwards and the list switches to `Custom`.
 
 ## Updates
 
 The manager checks GitHub Releases when it starts. The switch in the Setup tab turns that
-off; **Check now** asks immediately. When a newer version is published, the manager offers
-**Install now** or **Later**. Install downloads the release setup, verifies its SHA-256
-checksum and publisher metadata, closes the manager, runs the setup silently, and relaunches
-it. The install folder and your `%LOCALAPPDATA%\MW3Mod` settings stay where they are.
+off; **Check now** asks immediately. When a newer version is published, the manager asks
+whether to install it now. **Yes** downloads the release setup, verifies its SHA-256 checksum
+and publisher metadata, closes the manager, runs the setup silently, and relaunches it.
+**No** leaves the update for later. The install folder and your `%LOCALAPPDATA%\MW3Mod`
+settings stay where they are.
 
-The default repository is `xHybred/MW3-MM`. Set `MW3MOD_UPDATE_REPO` to `owner/name` to test
-another repository. A release must publish `MW3ModSetup.exe` and `MW3ModSetup.exe.sha256`;
-the build writes both to `out`. Release notes live in `CHANGELOG.md`; the first release
-describes the tool, and later releases list changes as short bullets.
+The manager refuses an update whose release does not publish `MW3ModSetup.exe.sha256`, so a
+release must contain `MW3ModSetup.exe` and its checksum file. The repository is
+`xHybred/MW3-MM`. Debug builds can point at another repository with `MW3MOD_UPDATE_REPO`.
+Release notes live in `CHANGELOG.md`; the first release describes the tool, and later
+releases list changes as short bullets.
 
-Manual install, if you prefer:
+Manual install (advanced):
 
 1. Copy `out\MW3Mod.dll` into the game folder as `X3DAudio1_7.dll`.
 2. Write `%LOCALAPPDATA%\MW3Mod\settings.ini`:
@@ -103,9 +118,14 @@ Style=0
 
 [Startup]
 SkipIntro=0
+
+[Update]
+CheckOnLaunch=1
 ```
 
-**Remove** in the manager (or deleting that one DLL) puts the game back to vanilla.
+**Remove** in the manager (or deleting that one DLL) deletes the proxy. The game's own
+`config.cfg` values take over on the next launch; your other settings and the game's config
+file are left alone.
 
 ## Settings
 
@@ -129,6 +149,7 @@ apply without a restart.
 | `[Sway] Enabled` | 1 scales how far the gun drifts while aiming and moving, 0 leaves it untouched |
 | `[Sway] Strength` | 0..1, how far the gun drifts. 1 = stock, 0 = no drift |
 | `[Flash] Enabled` | 1 leaves the muzzle flash and its smoke puff, 0 removes both |
+| `[Spread] Enabled` | 1 applies the spread scaling, 0 leaves the weapon data alone |
 | `[Spread] Accuracy` | 0..1, how much of the hipfire cone is removed. 1 = every hipfire bullet through the crosshair |
 | `[Spread] AimAccuracy` | 0..1, how much of the aimed cone is removed. 1 = every aimed bullet through the sight |
 | `[Spread] Bloom` | 0..1, how much of the per-shot cone growth is removed. 1 = sustained fire stays as tight as the first shot |
@@ -146,13 +167,24 @@ apply without a restart.
 | `[Update] CheckOnLaunch` | 1 checks GitHub Releases when the manager starts, 0 leaves it to the Check now button |
 | `[Debug] LogEffectiveFov` | log each weapon's aim FOV when it changes |
 | `[Debug] DvarScan` | log every step of the dvar lookup |
+| `[Debug] BlurCalls` | log hit-blur hook calls |
+| `[Debug] Recoil` | log recoil values |
+| `[Debug] Sway` | log sway values |
+| `[Debug] Spread` | log spread values |
+| `[Debug] Viewmodel` | log viewmodel offsets |
+| `[Debug] Crosshair` | log crosshair values |
+| `[Debug] FrameTime` | log frame times; only works on native Direct3D 9 |
+
+The manager keeps the master `Enabled` keys for the tabs it owns on and rewrites them when
+it saves. Use the sliders to neutralize a feature. The debug keys above are preserved.
 
 Logs: `%LOCALAPPDATA%\MW3Mod\Log`
 
 - `runtime.log` (UTF-16): the game-side trail. It records the runtime version, game exe, settings path, hook setup, and FOV changes.
 - `manager.log` (UTF-8): the manager-side trail. It records the Windows and .NET versions, game folder, installed runtime and renderers, settings saves, install and remove actions, and full exception details.
+- `update.log` (UTF-8): the Inno Setup log from a silent update launch. Download and checksum failures are recorded in `manager.log`.
 
-`settings.ini` stays in `%LOCALAPPDATA%\MW3Mod`, next to the `Log` folder. Logs from earlier builds are kept in `Log\legacy`. Share both current logs when reporting a problem.
+`settings.ini` stays in `%LOCALAPPDATA%\MW3Mod`, next to the `Log` folder. Logs from earlier builds are kept in `Log\legacy`. Share the current logs when reporting a problem. Logs include your Windows username and local paths, so review them before posting.
 
 ## How it works
 
@@ -286,13 +318,14 @@ the proxy's thread gets a look, so the toggle needs the manager and a closed gam
 ## Build
 
 Needs Visual Studio 2022 Build Tools with the C++ workload, CMake, the .NET 10 SDK, and
-Inno Setup 6.
+Inno Setup 6.3 or newer.
 
 ```powershell
 .\build.ps1 -Manager
 ```
 
-Output: `out\MW3Mod.dll` and `out\manager\`. The runtime alone is `.\build.ps1`.
+Output: `out\MW3Mod.dll` and `out\manager\`. The runtime alone is `.\build.ps1`. `out\` is
+build output only; normal users install from GitHub Releases.
 
 To build the installer, run:
 
@@ -305,6 +338,10 @@ target machine), stages the ReShade assets, and writes `out\MW3ModSetup.exe` plu
 `out\MW3ModSetup.exe.sha256`. The setup installs to
 `C:\Program Files\Hybred Tools\MW3 Mod Manager` and adds an uninstaller. Upload both files
 to the GitHub release so the in-app updater can verify the download.
+
+The setup carries the manager, runtime, ReShade assets, `LICENSE`, and
+`THIRD-PARTY-NOTICES.md`. Release builds always check `xHybred/MW3-MM`; only Debug builds
+can use `MW3MOD_UPDATE_REPO` to point at another repository.
 
 ## Notes and limits
 
@@ -321,15 +358,16 @@ to the GitHub release so the in-app updater can verify the download.
 - The manager can also install DXVK for a Vulkan renderer, or dgVoodoo 2 for Direct3D 11,
   either by downloading the latest release from GitHub or from a `d3d9.dll` you already
   have. Both occupy `d3d9.dll`, so only one can be installed at a time; the proxy sits on
-  `X3DAudio1_7.dll`, so the runtime does not collide with them. Neither is bundled.
+  `X3DAudio1_7.dll`, so the runtime does not collide with them. Neither is bundled. The
+  manager downloads their GitHub releases without a published checksum, so verify them
+  yourself if you want that extra check.
 - ReShade 6.8 ships with the manager together with its preset pack, shader library and
   `ShaderToggler` addon. It installs as `d3d9.dll` for native Direct3D 9, or as `dxgi.dll`
   next to dgVoodoo when the Direct3D 11 wrapper is active. The manager moves it
   automatically when the wrapper is added or removed, and keeps any `ReShade.ini`, preset
   or shader file already in the game folder. The overlay key is the one set in
   `ReShade.ini`. ReShade cannot share `d3d9.dll` with DXVK, so remove it before installing
-  DXVK; running both
-  needs ReShade's Vulkan install, which the manager does not set up.
+  DXVK; running both needs ReShade's Vulkan install, which the manager does not set up.
 - dgVoodoo 2 ships a configuration that reports 256 MB of video memory, and with that the
   game renders a mission but never starts it: the loading card stays on screen and the
   level's dvars never register. The manager raises that line to 1024 MB on install, which
@@ -341,3 +379,34 @@ to the GitHub release so the in-app updater can verify the download.
   in a running game from outside, `inspect.py` dumps candidate dvar structs, and
   `patch_weapon_fov.py` served as the proof that overriding the weapon ADS FOV is enough
   (a runtime patch of that function, now superseded by the hook).
+
+## Troubleshooting
+
+- Game does not start or closes immediately: close the game, then remove ReShade, DXVK, or
+  dgVoodoo in the Setup tab and try again. If it still fails, remove the runtime and check
+  that the game starts without the mod.
+- No `runtime.log` entry for a launch: make sure the Runtime row says Installed, launch
+  `iw5sp.exe` through Steam, and open the Logs folder. Starting `iw5sp.exe` directly exits
+  because the on-disk file is a Steam DRM stub.
+- SmartScreen or antivirus warning: the setup is not code-signed. Verify
+  `MW3ModSetup.exe` against the release `.sha256`, then allow it. Do not disable antivirus
+  protection.
+- ReShade overlay does not open: press the overlay key configured in `ReShade.ini`. Check
+  `ReShade.log` in the game folder for load errors. The Steam overlay does not draw over
+  DXVK.
+- Custom crosshair or frame-time counter is missing: those need native Direct3D 9. They do
+  not work while dgVoodoo is active; the game's own crosshair still does.
+- Update fails: open the Logs folder and read `manager.log` for download and checksum errors,
+  and `update.log` for the silent installer log. Check the network connection and that the
+  release publishes `MW3ModSetup.exe.sha256`. If needed, download the setup from the release
+  page and run it manually.
+- Return to vanilla: press Remove in the Runtime row. It deletes the proxy; the game's own
+  config values take over on the next launch. Other settings and `config.cfg` are left
+  alone.
+
+## License
+
+MW3 Mod Manager is released under the MIT License. See [`LICENSE`](LICENSE).
+
+Bundled third-party components and shader packs are listed in
+[`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).

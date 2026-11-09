@@ -29,6 +29,10 @@ public sealed class ModConfig
     public bool RecoilEnabled { get; set; } = true;
     public float RecoilStrength { get; set; } = 1.0f;
     public bool RecoilDebug { get; set; }
+    public bool SwayDebug { get; set; }
+    public bool SpreadDebug { get; set; }
+    public bool ViewmodelDebug { get; set; }
+    public bool FrameTimeDebug { get; set; }
 
     public bool SwayEnabled { get; set; } = true;
     public float SwayStrength { get; set; } = 1.0f;
@@ -306,7 +310,11 @@ public sealed class ModConfig
                     case "dvarscan": config.DvarScan = ParseBool(value, config.DvarScan); break;
                     case "blurcalls": config.BlurDebug = ParseBool(value, config.BlurDebug); break;
                     case "recoil": config.RecoilDebug = ParseBool(value, config.RecoilDebug); break;
+                    case "sway": config.SwayDebug = ParseBool(value, config.SwayDebug); break;
+                    case "spread": config.SpreadDebug = ParseBool(value, config.SpreadDebug); break;
+                    case "viewmodel": config.ViewmodelDebug = ParseBool(value, config.ViewmodelDebug); break;
                     case "crosshair": config.CrosshairDebug = ParseBool(value, config.CrosshairDebug); break;
+                    case "frametime": config.FrameTimeDebug = ParseBool(value, config.FrameTimeDebug); break;
                 }
             }
         }
@@ -377,8 +385,13 @@ public sealed class ModConfig
             "[Debug]",
             $"LogEffectiveFov={(LogEffectiveFov ? 1 : 0)}",
             $"DvarScan={(DvarScan ? 1 : 0)}",
+            $"BlurCalls={(BlurDebug ? 1 : 0)}",
             $"Recoil={(RecoilDebug ? 1 : 0)}",
+            $"Sway={(SwayDebug ? 1 : 0)}",
+            $"Spread={(SpreadDebug ? 1 : 0)}",
+            $"Viewmodel={(ViewmodelDebug ? 1 : 0)}",
             $"Crosshair={(CrosshairDebug ? 1 : 0)}",
+            $"FrameTime={(FrameTimeDebug ? 1 : 0)}",
             "",
         });
 

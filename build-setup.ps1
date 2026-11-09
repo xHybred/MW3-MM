@@ -21,6 +21,14 @@ New-Item -ItemType Directory -Force -Path $stage | Out-Null
 & dotnet publish (Join-Path $root 'src\manager') -c Release -r win-x64 --self-contained true -o $stage -p:DebugType=None -p:DebugSymbols=false
 if ($LASTEXITCODE -ne 0) { throw 'Manager publish failed' }
 
+$managerExe = Join-Path $stage 'MW3ModManager.exe'
+$managerVersion = (Get-Item -LiteralPath $managerExe).VersionInfo.ProductVersion
+if ($managerVersion -notmatch '^(\d+\.\d+\.\d+)') { throw "Could not read the manager version from $managerExe" }
+$managerVersion = $Matches[1]
+if ($managerVersion -ne $version) {
+    throw "Version mismatch: runtime is $version but the manager is $managerVersion. Bump the csproj, installer and runtime together."
+}
+
 Copy-Item $runtime (Join-Path $stage 'MW3Mod.dll') -Force
 Get-ChildItem $stage -Filter '*.pdb' -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force
 

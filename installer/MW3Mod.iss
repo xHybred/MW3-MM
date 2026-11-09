@@ -1,7 +1,7 @@
 ; Build with build-setup.ps1, or run ISCC directly after staging out\installer\app.
 
 #ifndef AppVersion
-  #define AppVersion "1.0.0"
+  #define AppVersion "1.0.1"
 #endif
 
 #ifndef InstallPrivileges
@@ -22,7 +22,11 @@ AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
 AppPublisher={#AppPublisher}
+AppPublisherURL=https://github.com/xHybred/MW3-MM
+AppSupportURL=https://github.com/xHybred/MW3-MM/issues
+AppUpdatesURL=https://github.com/xHybred/MW3-MM/releases
 AppComments=Field of view and quality-of-life mod manager for Call of Duty: Modern Warfare 3 (2011)
+LicenseFile=..\LICENSE
 DefaultDirName={autopf}\Hybred Tools\{#AppName}
 DefaultGroupName=Hybred Tools
 DisableProgramGroupPage=yes
@@ -56,6 +60,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "..\out\installer\app\*"; DestDir: "{app}"; Excludes: "*.pdb"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\Hybred Tools\MW3 Mod Manager"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\{#AppExeName}"

@@ -35,8 +35,11 @@ internal static class UpdateService
     {
         get
         {
+#if DEBUG
             string? value = Environment.GetEnvironmentVariable("MW3MOD_UPDATE_REPO");
-            return string.IsNullOrWhiteSpace(value) ? DefaultRepository : value.Trim();
+            if (!string.IsNullOrWhiteSpace(value)) return value.Trim();
+#endif
+            return DefaultRepository;
         }
     }
 
@@ -93,8 +96,10 @@ internal static class UpdateService
             throw new InvalidOperationException("The latest release has no downloadable files.");
 
         string? setupUrl = null;
+        string? fallbackSetupUrl = null;
         string setupName = "MW3ModSetup.exe";
-        string? checksumUrl = null;
+        string fallbackSetupName = "MW3ModSetup.exe";
+        var checksums = new List<(string Name, string Url)>();
 
         foreach (JsonElement asset in assets.EnumerateArray())
         {
@@ -102,28 +107,43 @@ internal static class UpdateService
             string assetUrl = GetString(asset, "browser_download_url");
             if (assetName.Length == 0 || assetUrl.Length == 0) continue;
 
-            if (setupUrl is null &&
-                (assetName.Equals("MW3ModSetup.exe", StringComparison.OrdinalIgnoreCase) ||
-                 (assetName.StartsWith("MW3ModSetup", StringComparison.OrdinalIgnoreCase) &&
-                  assetName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))))
+            if (assetName.Equals("MW3ModSetup.exe", StringComparison.OrdinalIgnoreCase))
             {
                 setupUrl = assetUrl;
                 setupName = assetName;
             }
-
-            bool isSetupChecksum =
-                assetName.Equals(setupName + ".sha256", StringComparison.OrdinalIgnoreCase) ||
-                (assetName.Contains("sha256", StringComparison.OrdinalIgnoreCase) &&
-                 (assetName.EndsWith(".sha256", StringComparison.OrdinalIgnoreCase) ||
-                  assetName.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)));
-            if (isSetupChecksum)
+            else if (fallbackSetupUrl is null &&
+                     assetName.StartsWith("MW3ModSetup", StringComparison.OrdinalIgnoreCase) &&
+                     assetName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
             {
-                if (checksumUrl is null) checksumUrl = assetUrl;
+                fallbackSetupUrl = assetUrl;
+                fallbackSetupName = assetName;
             }
+
+            if (assetName.Contains("sha256", StringComparison.OrdinalIgnoreCase) &&
+                (assetName.EndsWith(".sha256", StringComparison.OrdinalIgnoreCase) ||
+                 assetName.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)))
+            {
+                checksums.Add((assetName, assetUrl));
+            }
+        }
+
+        if (setupUrl is null && fallbackSetupUrl is not null)
+        {
+            setupUrl = fallbackSetupUrl;
+            setupName = fallbackSetupName;
         }
 
         if (setupUrl is null)
             throw new InvalidOperationException("The latest release does not include " + setupName + ".");
+
+        string? checksumUrl =
+            checksums.FirstOrDefault(c => c.Name.Equals(setupName + ".sha256", StringComparison.OrdinalIgnoreCase)).Url ??
+            checksums.FirstOrDefault(c => c.Name.EndsWith(".sha256", StringComparison.OrdinalIgnoreCase)).Url ??
+            checksums.FirstOrDefault(c => c.Name.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)).Url;
+
+        if (checksumUrl is null)
+            throw new InvalidDataException("The latest release does not publish a SHA-256 checksum for " + setupName + ".");
 
         return new ReleaseInfo(
             Normalize(version), tag, name.Length == 0 ? tag : name, notes, pageUrl,
@@ -133,6 +153,9 @@ internal static class UpdateService
     public static async Task<UpdateDownload> DownloadAsync(
         HttpClient http, ReleaseInfo release, IProgress<double>? progress, CancellationToken token)
     {
+        if (release.ChecksumUrl is null)
+            throw new InvalidDataException("The release does not publish a SHA-256 checksum, so its installer cannot be verified.");
+
         string folder = Path.Combine(ModConfig.DataDir, "Updates", SafeName(release.Tag));
         Directory.CreateDirectory(folder);
 
@@ -171,18 +194,13 @@ internal static class UpdateService
             if (length < 1_000_000)
                 throw new InvalidDataException("The downloaded installer is too small to be complete.");
 
-            bool verified = false;
-            if (release.ChecksumUrl is not null)
-            {
-                string expected = await ReadChecksumAsync(http, release, token);
-                if (!expected.Equals(actualHash, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidDataException("The downloaded installer did not match the published checksum.");
-                verified = true;
-            }
+            string expected = await ReadChecksumAsync(http, release, token);
+            if (!expected.Equals(actualHash, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("The downloaded installer did not match the published checksum.");
 
             VerifyInstallerMetadata(partPath, release.Version);
             File.Move(partPath, finalPath, overwrite: true);
-            return new UpdateDownload(finalPath, actualHash, verified);
+            return new UpdateDownload(finalPath, actualHash, true);
         }
         catch
         {
@@ -197,8 +215,11 @@ internal static class UpdateService
             throw new FileNotFoundException("The downloaded installer is missing.", setupPath);
 
         string directory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(installDir));
+        Directory.CreateDirectory(ModConfig.LogDir);
+        string logPath = Path.Combine(ModConfig.LogDir, "update.log");
         string arguments =
-            "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /FORCECLOSEAPPLICATIONS /LOG /DIR=\"" + directory + "\"";
+            "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /FORCECLOSEAPPLICATIONS /LOG=\"" +
+            logPath + "\" /DIR=\"" + directory + "\"";
         if (relaunch) arguments += " /RELAUNCH=1";
 
         var start = new ProcessStartInfo(setupPath, arguments)
@@ -218,6 +239,12 @@ internal static class UpdateService
         request.Headers.UserAgent.ParseAdd(UserAgent + "/" + CurrentVersionText);
         request.Headers.Accept.ParseAdd("application/vnd.github+json");
         return request;
+    }
+
+    public static string HashFile(string path)
+    {
+        using var stream = File.OpenRead(path);
+        return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
     }
 
     private static async Task<string> ReadChecksumAsync(

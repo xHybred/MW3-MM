@@ -135,7 +135,7 @@ public static class Presets
 
     public static Preset Bodycam { get; } = new(
         "Bodycam",
-        "The handheld-camera look: pulled-in gun, perfect hipfire, half the sway and a small faint crosshair.",
+        "The handheld-camera look: pushed-out gun, perfect hipfire, half the sway and a small faint crosshair.",
         new ModConfig
         {
             Enabled = true,

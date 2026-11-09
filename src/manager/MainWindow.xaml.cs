@@ -39,6 +39,7 @@ public partial class MainWindow : Window
         {
             _updateCts?.Cancel();
             _statusTimer.Stop();
+            if (_saveTimer.IsEnabled) SaveConfig();
             _saveTimer.Stop();
             Log.Info("Manager closed.");
         };
@@ -115,7 +116,7 @@ public partial class MainWindow : Window
     private void ApplyConfigToControls()
     {
         IntroSwitch.IsChecked = _config.SkipIntro;
-        FovSlider.Value = Math.Clamp(_config.Fov, 60f, ModConfig.MaxFov);
+        FovSlider.Value = Math.Clamp(_config.Fov, ModConfig.MinFov, ModConfig.MaxFov);
         AimSlider.Value = Math.Clamp(_config.AimZoom * 100f, 100f, ModConfig.MaxZoom * 100f);
         EnabledSwitch.IsChecked = _config.Enabled;
         AffectedSwitch.IsChecked = _config.Affected;
@@ -814,9 +815,12 @@ public partial class MainWindow : Window
 
         try
         {
-            bool installed = RuntimeInstaller.ProxyVersion(_gameDir) is not null;
-            Log.Info(installed ? "Runtime remove requested." : "Runtime install requested.");
-            if (installed)
+            string? current = RuntimeInstaller.ProxyVersion(_gameDir);
+            string? bundled = RuntimeInstaller.BundledVersion;
+            bool installed = current is not null;
+            bool update = installed && bundled is not null && current != bundled;
+            Log.Info(update ? "Runtime update requested." : installed ? "Runtime remove requested." : "Runtime install requested.");
+            if (installed && !update)
             {
                 RuntimeInstaller.RemoveProxy(_gameDir);
                 Log.Info("Runtime removed.");
@@ -826,7 +830,9 @@ public partial class MainWindow : Window
             {
                 RuntimeInstaller.InstallProxy(_gameDir);
                 Log.Info("Runtime installed: " + (RuntimeInstaller.ProxyVersion(_gameDir) ?? "unknown") + ".");
-                StatusText.Text = "Runtime installed. Start the game however you like.";
+                StatusText.Text = update
+                    ? "Runtime updated. Start the game however you like."
+                    : "Runtime installed. Start the game however you like.";
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException
@@ -953,7 +959,7 @@ public partial class MainWindow : Window
         // The slot check comes before the download so a wrapper that is already
         // installed is named straight away instead of after a 9 MB fetch.
         var taken = RuntimeInstaller.Owner(_gameDir);
-        if (taken != RuntimeInstaller.D3d9Owner.Nobody)
+        if (taken != RuntimeInstaller.D3d9Owner.Nobody && taken != RuntimeInstaller.D3d9Owner.ReShade)
         {
             Log.Warn("Direct3D 11 blocked: d3d9.dll is owned by " + RuntimeInstaller.OwnerName(taken) + ".");
             StatusText.Text = $"d3d9.dll is taken by {RuntimeInstaller.OwnerName(taken)}. Remove it first.";
@@ -1013,16 +1019,17 @@ public partial class MainWindow : Window
 
         try
         {
-            // When the file comes out of the zip, the conf sits at its root.
-            string? folder = Path.GetDirectoryName(dialog.FileName);
-            string? conf = folder is null
-                ? null
-                : Path.Combine(Path.GetDirectoryName(folder) ?? folder, RuntimeInstaller.DgVoodooConfName);
+            // The zip keeps the conf at its root, often a few levels above the DLL.
+            string? conf = FindDgVoodooConf(dialog.FileName);
+            if (conf is null)
+                Log.Warn("dgVoodoo.conf was not found near " + dialog.FileName + "; the VRAM fix will be skipped.");
 
             Log.Info("Installing dgVoodoo from " + dialog.FileName + ".");
             RuntimeInstaller.InstallD3d11(_gameDir, dialog.FileName, conf);
             Log.Info("dgVoodoo installed from file.");
-            StatusText.Text = "dgVoodoo installed as d3d9.dll.";
+            StatusText.Text = conf is null
+                ? "dgVoodoo installed as d3d9.dll. dgVoodoo.conf was not found, so the VRAM fix was skipped."
+                : "dgVoodoo installed as d3d9.dll.";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
@@ -1030,6 +1037,18 @@ public partial class MainWindow : Window
         }
 
         Refresh();
+    }
+
+    private static string? FindDgVoodooConf(string dllPath)
+    {
+        string? folder = Path.GetDirectoryName(dllPath);
+        for (int depth = 0; depth < 4 && folder is not null; depth++)
+        {
+            string candidate = Path.Combine(folder, RuntimeInstaller.DgVoodooConfName);
+            if (File.Exists(candidate)) return candidate;
+            folder = Path.GetDirectoryName(folder);
+        }
+        return null;
     }
 
     private void ReShade_Click(object sender, RoutedEventArgs e)
@@ -1137,7 +1156,7 @@ public partial class MainWindow : Window
             UpdateDetail.Text = "Could not start the update installer. See manager.log.";
             Fail("Could not install the update", ex);
         }
-        catch (Exception ex) when (ex is HttpRequestException or JsonException or IOException or UnauthorizedAccessException or InvalidOperationException)
+        catch (Exception ex) when (ex is HttpRequestException or JsonException or IOException or UnauthorizedAccessException or InvalidOperationException or InvalidDataException)
         {
             string title = downloading ? "Could not install the update" : "Could not check for updates";
             UpdateDetail.Text = title + ". See manager.log.";
@@ -1168,7 +1187,7 @@ public partial class MainWindow : Window
             Log.Warn("Update cancelled at the Windows elevation prompt.");
             UpdateDetail.Text = "Update cancelled. The manager was not changed.";
         }
-        catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or InvalidOperationException or InvalidDataException or System.ComponentModel.Win32Exception)
         {
             Log.Error("Update failed", ex);
             UpdateDetail.Text = "Update failed. The current version is unchanged. See manager.log.";
@@ -1183,13 +1202,21 @@ public partial class MainWindow : Window
     private async Task DownloadAndInstallAsync(ReleaseInfo release)
     {
         UpdateDownload download;
-        if (_downloaded is not null && File.Exists(_downloaded.Path))
+        if (_downloaded is not null &&
+            File.Exists(_downloaded.Path) &&
+            UpdateService.HashFile(_downloaded.Path).Equals(_downloaded.Sha256, StringComparison.OrdinalIgnoreCase))
         {
             download = _downloaded;
             Log.Info("Using the downloaded update at " + download.Path + ".");
         }
         else
         {
+            if (_downloaded is not null)
+            {
+                Log.Warn("The downloaded update changed on disk or is missing; downloading it again.");
+                _downloaded = null;
+            }
+
             using HttpClient http = UpdateService.CreateHttpClient();
             var progress = new Progress<double>(value =>
             {
