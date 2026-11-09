@@ -70,7 +70,7 @@ public static class Presets
         {
             Enabled = true,
             Affected = true,
-            Fov = 105f,
+            Fov = 90f,
 
             AimEnabled = true,
             AimFlat = false,
@@ -82,7 +82,7 @@ public static class Presets
             SwayStrength = 0f,
             FlashEnabled = false,
             SpreadAccuracy = 0.25f,
-            SpreadAimAccuracy = 0.25f,
+            SpreadAimAccuracy = 1.0f,
             SpreadBloom = 1f,
 
             ViewmodelEnabled = true,
