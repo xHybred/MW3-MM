@@ -127,6 +127,20 @@ CheckOnLaunch=1
 `config.cfg` values take over on the next launch; your other settings and the game's config
 file are left alone.
 
+## Network
+
+Survival co-op is peer-to-peer, so both players need a working path to each other. The
+**Network** card under Setup checks the local adapter, UPnP availability, the router's external
+address against the public address, and whether the game executable is found.
+
+**Fix connection** adds inbound and outbound Windows Firewall rules for `iw5sp.exe` (and Steam
+when it can find it), then asks a UPnP router to map TCP/UDP 3074 and 27014-27050. **Copy report**
+puts the result on the clipboard so both players can compare.
+
+This cannot open the other player's router, work when UPnP is disabled, or fix carrier-grade NAT
+(CGNAT). If the report says the router's external address differs from the public address, port
+forwarding will not help; ask the ISP for a public IP or use a relay/VPN that both players share.
+
 ## Settings
 
 `%LOCALAPPDATA%\MW3Mod\settings.ini`, re-read every 250 ms while the game runs, so edits

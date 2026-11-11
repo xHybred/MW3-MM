@@ -694,6 +694,35 @@
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <DockPanel>
+                                <Button x:Name="NetworkFixButton" DockPanel.Dock="Right" Content="Fix connection"
+                                        Click="NetworkFix_Click" MinWidth="120" VerticalAlignment="Top"
+                                        Style="{StaticResource PrimaryButton}" Margin="12,0,0,0" />
+                                <StackPanel>
+                                    <TextBlock Text="Network" Style="{StaticResource Section}" />
+                                    <TextBlock x:Name="NetworkDetail"
+                                               Text="Survival co-op is peer-to-peer. Check the local side first: firewall, UPnP and CGNAT."
+                                               Style="{StaticResource Subtext}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DockPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <Button x:Name="NetworkCheckButton" Content="Check" Click="NetworkCheck_Click" MinWidth="84" />
+                                <Button x:Name="NetworkCopyButton" Content="Copy report" Click="NetworkCopy_Click"
+                                        MinWidth="104" Margin="8,0,0,0" />
+                            </StackPanel>
+
+                            <TextBlock x:Name="NetworkReport" Visibility="Collapsed"
+                                       FontFamily="Consolas" FontSize="11.5" TextWrapping="Wrap"
+                                       Margin="0,10,0,0" Foreground="{StaticResource Muted}" />
+
+                            <TextBlock Margin="0,10,0,0" Style="{StaticResource Subtext}" Opacity="0.7" TextWrapping="Wrap"
+                                       Text="Both players should run this. No local tool can open the other player's router or fix CGNAT. If the router has UPnP disabled, the ports need to be forwarded manually." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <DockPanel>
                                 <Button x:Name="UpdateButton" DockPanel.Dock="Right" Content="Check now"
                                         Click="Update_Click" MinWidth="110" VerticalAlignment="Top"
                                         Margin="12,0,0,0" />

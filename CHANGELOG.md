@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.3
+
+- Added a Network card under Setup with firewall rules, UPnP port mappings, a CGNAT check, and a copyable report.
+- The report warns when the router is behind carrier-grade NAT and cannot be fixed from the local machine.
+
 ## 1.0.2
 
 - Fixed hit registration at stock settings by skipping neutral weapon-state writes and removing the diagnostic bullet and RNG hooks from release builds.

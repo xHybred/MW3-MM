@@ -23,6 +23,7 @@ public partial class MainWindow : Window
     private bool _gameWasRunning;
     private long _statusHoldUntil;
     private bool _updateBusy;
+    private bool _networkBusy;
     private CancellationTokenSource? _updateCts;
     private ReleaseInfo? _availableRelease;
     private UpdateDownload? _downloaded;
@@ -1278,6 +1279,119 @@ public partial class MainWindow : Window
 
         UpdateButton.Content = _availableRelease is not null ? "Install update" : "Check now";
         UpdateButton.IsEnabled = true;
+    }
+
+    private async void NetworkFix_Click(object sender, RoutedEventArgs e)
+    {
+        if (_networkBusy) return;
+
+        _networkBusy = true;
+        SetNetworkButtons(false);
+        NetworkFixButton.Content = "Working...";
+        NetworkReport.Visibility = Visibility.Visible;
+        NetworkDetail.Text = "Adding firewall rules, then asking the router for port mappings...";
+        NetworkReport.Text = "Starting...";
+        Log.Info("Network fix requested.");
+
+        try
+        {
+            var progress = new Progress<string>(text =>
+            {
+                NetworkDetail.Text = text;
+                StatusText.Text = text;
+            });
+            string report = await NetworkTools.FixAsync(_gameDir, progress, CancellationToken.None);
+            NetworkReport.Text = report;
+            NetworkDetail.Text = NetworkSummary(report);
+            StatusText.Text = "Network fix finished.";
+            Log.Info("Network fix completed. " + report.Replace(Environment.NewLine, " | "));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or HttpRequestException
+            or System.Net.Sockets.SocketException or TaskCanceledException or System.Xml.XmlException or System.ComponentModel.Win32Exception)
+        {
+            NetworkReport.Text = ex.Message;
+            Fail("Could not fix the network", ex);
+        }
+        finally
+        {
+            _networkBusy = false;
+            SetNetworkButtons(true);
+            NetworkFixButton.Content = "Fix connection";
+        }
+    }
+
+    private async void NetworkCheck_Click(object sender, RoutedEventArgs e)
+    {
+        if (_networkBusy) return;
+
+        _networkBusy = true;
+        SetNetworkButtons(false);
+        NetworkCheckButton.Content = "Checking...";
+        NetworkReport.Visibility = Visibility.Visible;
+        NetworkDetail.Text = "Checking the local network...";
+        NetworkReport.Text = "Starting...";
+        Log.Info("Network check requested.");
+
+        try
+        {
+            var progress = new Progress<string>(text => NetworkDetail.Text = text);
+            string report = await NetworkTools.CheckAsync(_gameDir, progress, CancellationToken.None);
+            NetworkReport.Text = report;
+            NetworkDetail.Text = NetworkSummary(report);
+            StatusText.Text = "Network check finished.";
+            Log.Info("Network check completed. " + report.Replace(Environment.NewLine, " | "));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or HttpRequestException
+            or System.Net.Sockets.SocketException or TaskCanceledException or System.Xml.XmlException or System.ComponentModel.Win32Exception)
+        {
+            NetworkReport.Text = ex.Message;
+            Fail("Could not check the network", ex);
+        }
+        finally
+        {
+            _networkBusy = false;
+            SetNetworkButtons(true);
+            NetworkCheckButton.Content = "Check";
+        }
+    }
+
+    private void NetworkCopy_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(NetworkReport.Text))
+        {
+            StatusText.Text = "Run Check or Fix connection first.";
+            return;
+        }
+
+        try
+        {
+            Clipboard.SetText(NetworkReport.Text);
+            StatusText.Text = "Network report copied.";
+        }
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or System.ComponentModel.Win32Exception)
+        {
+            StatusText.Text = "Could not copy the report.";
+            Log.Warn("Could not copy the network report: " + ex.Message);
+        }
+    }
+
+    private void SetNetworkButtons(bool enabled)
+    {
+        NetworkFixButton.IsEnabled = enabled;
+        NetworkCheckButton.IsEnabled = enabled;
+        NetworkCopyButton.IsEnabled = enabled;
+    }
+
+    private static string NetworkSummary(string report)
+    {
+        if (report.Contains("CGNAT: likely", StringComparison.OrdinalIgnoreCase) ||
+            report.Contains("CGNAT warning", StringComparison.OrdinalIgnoreCase))
+            return "CGNAT detected: the router is behind another NAT. Port forwarding and UPnP cannot fix this; both players need a relay/VPN or a public IP.";
+        if (report.Contains("UPnP: no Internet Gateway Device", StringComparison.OrdinalIgnoreCase))
+            return "No UPnP router answered. If you can log in to the router, forward TCP/UDP 3074 and 27014-27050 manually.";
+        if (report.Contains("Adapter warning", StringComparison.OrdinalIgnoreCase))
+            return "The selected adapter is not a normal home-LAN address. Disconnect any VPN/virtual adapter and check again.";
+        return "Finished. Both players should run this and compare the report.";
     }
 
     private bool GuardGameRunning()
