@@ -25,7 +25,7 @@ std::atomic<float> g_size{1.0f};
 std::atomic<float> g_alpha{1.0f};
 std::atomic<float> g_verticalOffset{0.0f};
 std::atomic<ULONGLONG> g_engineDrewAt{0};
-std::atomic<ULONGLONG> g_aimingAt{0};
+std::atomic<ULONGLONG> g_gameplayAt{0};
 std::atomic<bool> g_alwaysShow{false};
 std::atomic<unsigned int> g_color{0xFFFFFFFFu};
 std::atomic<bool> g_frameTime{false};
@@ -211,11 +211,11 @@ void DrawOverlay(IDirect3DDevice9* device) {
 
     const ULONGLONG now = GetTickCount64();
     const ULONGLONG drew = g_engineDrewAt.load(std::memory_order_relaxed);
-    const ULONGLONG aimed = g_aimingAt.load(std::memory_order_relaxed);
+    const ULONGLONG alive = g_gameplayAt.load(std::memory_order_relaxed);
     const bool engineDrew = drew != 0 && now - drew <= 250;
-    const bool aiming = g_alwaysShow.load(std::memory_order_relaxed) && aimed != 0 &&
-                        now - aimed <= 250;
-    if (!engineDrew && !aiming) return;
+    const bool gameplay = g_alwaysShow.load(std::memory_order_relaxed) && alive != 0 &&
+                          now - alive <= 250;
+    if (!engineDrew && !gameplay) return;
 
     D3DVIEWPORT9 vp{};
     if (FAILED(device->GetViewport(&vp)) || vp.Width == 0 || vp.Height == 0) return;
@@ -369,8 +369,8 @@ void MarkEngineCrosshair() {
     g_engineDrewAt.store(GetTickCount64(), std::memory_order_relaxed);
 }
 
-void MarkAiming() {
-    g_aimingAt.store(GetTickCount64(), std::memory_order_relaxed);
+void MarkGameplay() {
+    g_gameplayAt.store(GetTickCount64(), std::memory_order_relaxed);
 }
 
 void SetColor(float r, float g, float b, float a) {

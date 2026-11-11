@@ -1,6 +1,7 @@
 #include "viewmodel.h"
 
 #include "log.h"
+#include "overlay.h"
 
 #include <windows.h>
 
@@ -46,6 +47,7 @@ namespace
 
     void __fastcall HookedOrigin(void* client, void* out, void* in, void* a4)
     {
+        overlay::MarkGameplay();
         g_original(client, out, in, a4);
 
         if (!client || !out || !g_enabled.load(std::memory_order_relaxed))

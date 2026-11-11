@@ -15,9 +15,9 @@ void Update(const ModSettings& settings);
 // the game itself would have drawn one (not over menus or a paused screen).
 void MarkEngineCrosshair();
 
-// Called from the aimed-cone query. Lets the custom crosshair stay up while
-// aiming down sights, when the option is enabled.
-void MarkAiming();
+// Called from the first-person model update and the aimed-cone query. Lets the
+// custom crosshair stay up while aiming down sights, when the option is enabled.
+void MarkGameplay();
 
 void SetVerticalOffset(float offset);
 

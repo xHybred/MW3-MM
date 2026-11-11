@@ -108,7 +108,7 @@ namespace
 
     float HookedAdsSpread(int clientNum, bool viaSlot)
     {
-        overlay::MarkAiming();
+        overlay::MarkGameplay();
         const float vanilla = g_original(clientNum, viaSlot);
 
         float result = vanilla;
