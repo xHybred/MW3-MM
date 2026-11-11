@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.5
+
+- Added a Co-op tuning card under Setup. It writes `r_vsync`, `cl_maxpackets`, `cl_packetdup` and a 60 or 120 FPS `com_maxfps` into `players2\config.cfg`.
+- Added a Make read-only / Make writable button for `config.cfg`; applying settings unlocks it only while writing.
+
 ## 1.0.4
 
 - Fixed the firewall helper failing during Fix connection. It now uses Windows' built-in `netsh` command and reports the exact failure if a rule cannot be added.

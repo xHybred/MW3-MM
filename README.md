@@ -133,13 +133,22 @@ Survival co-op is peer-to-peer, so both players need a working path to each othe
 **Network** card under Setup checks the local adapter, UPnP availability, the router's external
 address against the public address, and whether the game executable is found.
 
-**Fix connection** adds inbound and outbound Windows Firewall rules for `iw5sp.exe` (and Steam
-when it can find it), then asks a UPnP router to map TCP/UDP 3074 and 27014-27050. **Copy report**
-puts the result on the clipboard so both players can compare.
+**Fix connection** adds inbound and outbound Windows Firewall rules for `iw5sp.exe`, then asks a
+UPnP router to map TCP/UDP 3074 and 27014-27050. **Copy report** puts the result on the clipboard
+so both players can compare.
 
 This cannot open the other player's router, work when UPnP is disabled, or fix carrier-grade NAT
 (CGNAT). If the report says the router's external address differs from the public address, port
 forwarding will not help; ask the ISP for a public IP or use a relay/VPN that both players share.
+
+### Co-op tuning
+
+The **Co-op tuning** card writes the common Survival workarounds into `players2\config.cfg`:
+`r_vsync 1`, `cl_maxpackets 100`, `cl_packetdup 2`, and `com_maxfps` set to **60** or **120**.
+Close the game before applying; it rewrites `config.cfg` when it exits. Both players should use
+the same cap. **Make read-only** protects the lines from being changed, and Apply temporarily
+unlocks the file and restores read-only afterwards. These settings reduce the chance of a
+desync but do not change the game's peer-to-peer netcode, so they cannot guarantee a fix.
 
 ## Settings
 

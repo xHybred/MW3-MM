@@ -263,6 +263,7 @@ public partial class MainWindow : Window
         RefreshDxvkRow();
         RefreshD3d11Row();
         RefreshReShadeRow();
+        RefreshCoopRow();
         RefreshUpdateRow();
         UpdateFovUi();
     }
@@ -369,6 +370,33 @@ public partial class MainWindow : Window
                 : "Optional. Installs ReShade for native Direct3D 9 as d3d9.dll, with the included presets and shaders.";
         }
     }
+
+    private void RefreshCoopRow()
+    {
+        string? path = CoopConfig.ConfigPath(_gameDir);
+        bool exists = path is not null && File.Exists(path);
+
+        CoopApplyButton.IsEnabled = exists;
+        CoopReadOnlyButton.IsEnabled = exists;
+
+        if (!exists)
+        {
+            CoopDetail.Text = _gameDir is null
+                ? "Pick the game folder first."
+                : "players2\\config.cfg does not exist yet. Launch the game once, close it, then try again.";
+            CoopReadOnlyButton.Content = "Make read-only";
+            return;
+        }
+
+        var state = CoopConfig.Read(_gameDir);
+        CoopCapBox.SelectedIndex = state.FrameCap == 120 ? 1 : 0;
+
+        string cap = state.FrameCap is 60 or 120 ? state.FrameCap + " FPS" : "cap not set";
+        CoopDetail.Text = $"{cap}; r_vsync {Show(state.Vsync)}; cl_maxpackets {Show(state.MaxPackets)}; cl_packetdup {Show(state.PacketDup)}. config.cfg is {(state.ReadOnly ? "read-only" : "writable")}.";
+        CoopReadOnlyButton.Content = state.ReadOnly ? "Make writable" : "Make read-only";
+    }
+
+    private static string Show(string? value) => string.IsNullOrWhiteSpace(value) ? "not set" : value;
 
     private void UpdateFovUi()
     {
@@ -522,6 +550,9 @@ public partial class MainWindow : Window
         {
             Log.Info(running ? "Game started." : "Game stopped.");
             _gameWasRunning = running;
+            // The game rewrites config.cfg when it exits, so the co-op row may
+            // now describe different values.
+            if (!running) RefreshCoopRow();
         }
         GameDot.Fill = Brush(running ? "Accent" : "Dim");
         GameStateText.Text = running ? "Game running" : "Game not running";
@@ -574,6 +605,59 @@ public partial class MainWindow : Window
             Log.Error("Could not edit config.cfg", ex);
             StatusText.Text = "Could not edit config.cfg: " + ex.Message;
             _statusHoldUntil = Environment.TickCount64 + 4000;
+        }
+    }
+
+    private void CoopApply_Click(object sender, RoutedEventArgs e)
+    {
+        if (_gameDir is null) return;
+        if (GuardGameRunning()) return;
+
+        int cap = CoopCapBox.SelectedIndex == 1 ? 120 : CoopConfig.DefaultFrameCap;
+
+        try
+        {
+            bool readOnly = CoopConfig.Apply(_gameDir, cap);
+            Log.Info($"Co-op settings applied: com_maxfps={cap}, r_vsync=1, cl_maxpackets=100, cl_packetdup=2" +
+                     (readOnly ? "; config.cfg left read-only." : "."));
+            StatusText.Text = readOnly
+                ? $"Co-op settings applied with a {cap} FPS cap; config.cfg is still read-only."
+                : $"Co-op settings applied with a {cap} FPS cap. Start the game when ready.";
+            _statusHoldUntil = Environment.TickCount64 + 5000;
+            RefreshCoopRow();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            Fail("Could not change the co-op settings", ex);
+        }
+    }
+
+    private void CoopReadOnly_Click(object sender, RoutedEventArgs e)
+    {
+        if (_gameDir is null) return;
+        if (GuardGameRunning()) return;
+
+        string? path = CoopConfig.ConfigPath(_gameDir);
+        if (path is null || !File.Exists(path))
+        {
+            StatusText.Text = "Launch the game once so it creates players2\\config.cfg.";
+            return;
+        }
+
+        try
+        {
+            bool readOnly = !CoopConfig.IsReadOnly(_gameDir);
+            CoopConfig.SetReadOnly(_gameDir, readOnly);
+            Log.Info("config.cfg read-only " + (readOnly ? "enabled." : "disabled."));
+            StatusText.Text = readOnly
+                ? "config.cfg is read-only. The game cannot change the co-op settings."
+                : "config.cfg is writable again. The game can change it when it exits.";
+            _statusHoldUntil = Environment.TickCount64 + 5000;
+            RefreshCoopRow();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            Fail("Could not change config.cfg permissions", ex);
         }
     }
 

@@ -693,6 +693,32 @@
 
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
+                            <TextBlock Text="Co-op tuning" Style="{StaticResource Section}" />
+                            <TextBlock x:Name="CoopDetail"
+                                       Text="Applies the community Survival settings to players2\config.cfg."
+                                       Style="{StaticResource Subtext}" Margin="0,3,0,0" TextWrapping="Wrap" />
+
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <TextBlock Text="Frame cap" Style="{StaticResource Subtext}"
+                                           VerticalAlignment="Center" Margin="0,0,8,0" />
+                                <ComboBox x:Name="CoopCapBox" Style="{StaticResource Dropdown}" Width="86"
+                                          VerticalAlignment="Center" SelectedIndex="0">
+                                    <ComboBoxItem Content="60 FPS" Tag="60" />
+                                    <ComboBoxItem Content="120 FPS" Tag="120" />
+                                </ComboBox>
+                                <Button x:Name="CoopApplyButton" Content="Apply" Click="CoopApply_Click"
+                                        MinWidth="84" Margin="10,0,0,0" />
+                                <Button x:Name="CoopReadOnlyButton" Content="Make read-only"
+                                        Click="CoopReadOnly_Click" MinWidth="126" Margin="8,0,0,0" />
+                            </StackPanel>
+
+                            <TextBlock Margin="0,10,0,0" Style="{StaticResource Subtext}" Opacity="0.7" TextWrapping="Wrap"
+                                       Text="Close the game before applying; it rewrites config.cfg on exit. Both players should use the same cap. Read-only stops the game from changing these lines." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
                             <DockPanel>
                                 <Button x:Name="NetworkFixButton" DockPanel.Dock="Right" Content="Fix connection"
                                         Click="NetworkFix_Click" MinWidth="120" VerticalAlignment="Top"

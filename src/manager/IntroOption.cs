@@ -29,30 +29,42 @@ public static class IntroOption
         string path = Path.Combine(gameDir, "players2", "config.cfg");
         string wanted = skip ? "seta intro \"0\"" : "seta intro \"1\"";
 
-        string text = File.Exists(path) ? File.ReadAllText(path) : "";
-        // Splitting on \n and rejoining the same way keeps whatever line endings
-        // the game wrote. It uses LF here, but a CR would ride along harmlessly.
-        string[] lines = text.Split('\n');
-
-        int found = -1;
-        for (int i = 0; i < lines.Length; ++i)
+        bool readOnly = File.Exists(path) && (File.GetAttributes(path) & FileAttributes.ReadOnly) != 0;
+        try
         {
-            if (TryParse(lines[i], out _))
+            if (readOnly) CoopConfig.SetReadOnly(gameDir, false);
+
+            string text = File.Exists(path) ? File.ReadAllText(path) : "";
+            // Splitting on \n and rejoining the same way keeps whatever line endings
+            // the game wrote. It uses LF here, but a CR would ride along harmlessly.
+            string[] lines = text.Split('\n');
+
+            int found = -1;
+            for (int i = 0; i < lines.Length; ++i)
             {
-                found = i;
-                break;
+                if (TryParse(lines[i], out _))
+                {
+                    found = i;
+                    break;
+                }
+            }
+
+            if (found >= 0)
+            {
+                lines[found] = wanted;
+                File.WriteAllText(path, string.Join("\n", lines));
+            }
+            else
+            {
+                string separator = text.Length > 0 && !text.EndsWith('\n') ? "\n" : "";
+                File.WriteAllText(path, text + separator + wanted + "\n");
             }
         }
-
-        if (found >= 0)
+        finally
         {
-            lines[found] = wanted;
-            File.WriteAllText(path, string.Join("\n", lines));
-        }
-        else
-        {
-            string separator = text.Length > 0 && !text.EndsWith('\n') ? "\n" : "";
-            File.WriteAllText(path, text + separator + wanted + "\n");
+            // The co-op card may have marked this file read-only, and the intro
+            // switch should not silently undo that protection.
+            if (readOnly) CoopConfig.SetReadOnly(gameDir, true);
         }
     }
 
