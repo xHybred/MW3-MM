@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.4
+
+- Fixed the firewall helper failing during Fix connection. It now uses Windows' built-in `netsh` command and reports the exact failure if a rule cannot be added.
+
 ## 1.0.3
 
 - Added a Network card under Setup with firewall rules, UPnP port mappings, a CGNAT check, and a copyable report.

@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Xml.Linq;
 
@@ -181,13 +182,21 @@ internal static class NetworkTools
         }
 
         lines.Add($"UPnP: {gateway.ServiceType}");
+        string? external = null;
+        string? publicIp = null;
+        var cgnat = false;
         try
         {
-            var external = await GetExternalAddressAsync(gateway, ct).ConfigureAwait(false);
+            external = await GetExternalAddressAsync(gateway, ct).ConfigureAwait(false);
             lines.Add($"Router external IP: {external ?? "unknown"}");
-            var publicIp = await GetPublicAddressAsync(ct).ConfigureAwait(false);
+            publicIp = await GetPublicAddressAsync(ct).ConfigureAwait(false);
             lines.Add($"Public IP: {publicIp ?? "unknown"}");
-            if (external is not null && publicIp is not null && !external.Equals(publicIp, StringComparison.OrdinalIgnoreCase))
+            cgnat = external is not null && IPAddress.TryParse(external, out var externalAddress) && IsPrivateAddress(externalAddress);
+            if (cgnat)
+            {
+                lines.Add("CGNAT warning: the router's WAN address is private, so this connection is behind another NAT.");
+            }
+            else if (external is not null && publicIp is not null && !external.Equals(publicIp, StringComparison.OrdinalIgnoreCase))
             {
                 lines.Add("CGNAT warning: the router address differs from the public address. Port forwarding may not help.");
             }
@@ -195,6 +204,13 @@ internal static class NetworkTools
         catch (Exception ex) when (IsNetworkError(ex))
         {
             lines.Add("Public address check: " + ex.Message);
+        }
+
+        if (cgnat)
+        {
+            lines.Add("Port mappings: skipped. Port forwarding on this router cannot be reached from the internet while it is behind CGNAT.");
+            lines.Add("Use a relay/VPN or ask the ISP for a public IP. If the other player has a public path, let them host.");
+            return string.Join(Environment.NewLine, lines);
         }
 
         var ok = 0;
@@ -230,6 +246,33 @@ internal static class NetworkTools
         return string.Join(Environment.NewLine, lines);
     }
 
+    private static string ShortPath(string path)
+    {
+        try
+        {
+            var buffer = new StringBuilder(1024);
+            return GetShortPathName(path, buffer, (uint)buffer.Capacity) > 0 ? buffer.ToString() : path;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return path;
+        }
+    }
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern uint GetShortPathName(string longPath, StringBuilder shortPath, uint size);
+
+    private static bool IsPrivateAddress(IPAddress address)
+    {
+        if (address.AddressFamily != AddressFamily.InterNetwork) return false;
+        var b = address.GetAddressBytes();
+        return b[0] == 10 ||
+            (b[0] == 172 && b[1] >= 16 && b[1] <= 31) ||
+            (b[0] == 192 && b[1] == 168) ||
+            (b[0] == 100 && b[1] >= 64 && b[1] <= 127) ||
+            (b[0] == 169 && b[1] == 254) ||
+            b[0] == 127;
+    }
     private static bool IsNetworkError(Exception ex) =>
         ex is HttpRequestException or IOException or SocketException or TaskCanceledException or InvalidOperationException or System.Xml.XmlException or OperationCanceledException;
 
@@ -240,21 +283,17 @@ internal static class NetworkTools
 
         var steam = SteamExe();
         var script = new StringBuilder();
-        script.AppendLine("$ErrorActionPreference = 'Stop'");
-        script.AppendLine("function Set-Rule([string]$name, [string]$direction, [string]$program) {");
-        script.AppendLine("  Get-NetFirewallRule -DisplayName $name -ErrorAction SilentlyContinue | Remove-NetFirewallRule -ErrorAction SilentlyContinue");
-        script.AppendLine("  New-NetFirewallRule -DisplayName $name -Direction $direction -Program $program -Action Allow -Profile Any -Enabled True | Out-Null");
-        script.AppendLine("}");
-        AppendRule(script, "MW3 Mod Manager - iw5sp (in)", "Inbound", game);
-        AppendRule(script, "MW3 Mod Manager - iw5sp (out)", "Outbound", game);
+        script.AppendLine("@echo off");
+        AppendRule(script, "MW3 Mod Manager iw5sp in", "in", game);
+        AppendRule(script, "MW3 Mod Manager iw5sp out", "out", game);
         if (steam is not null)
         {
-            AppendRule(script, "MW3 Mod Manager - Steam (in)", "Inbound", steam);
-            AppendRule(script, "MW3 Mod Manager - Steam (out)", "Outbound", steam);
+            AppendRule(script, "MW3 Mod Manager Steam in", "in", steam);
+            AppendRule(script, "MW3 Mod Manager Steam out", "out", steam);
         }
-        script.AppendLine("Write-Output 'OK'");
+        script.AppendLine("echo OK");
 
-        var result = RunElevatedPowerShell(script.ToString());
+        var result = RunElevatedCommand(script.ToString());
         if (!result.Contains("OK", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("The firewall command did not finish. " + result.Trim());
         return steam is null
@@ -264,24 +303,27 @@ internal static class NetworkTools
 
     private static void AppendRule(StringBuilder script, string name, string direction, string program)
     {
-        var safeName = name.Replace("'", "''");
-        var safeProgram = program.Replace("'", "''");
-        script.AppendLine($"Set-Rule '{safeName}' '{direction}' '{safeProgram}'");
+        var safeName = name.Replace("\"", "\"\"");
+        var safeProgram = ShortPath(program).Replace("\"", "\"\"");
+        script.AppendLine($"netsh advfirewall firewall delete rule name=\"{safeName}\" >nul 2>&1");
+        script.AppendLine($"netsh advfirewall firewall add rule name=\"{safeName}\" dir={direction} action=allow program=\"{safeProgram}\" enable=yes profile=any");
+        script.AppendLine("if errorlevel 1 exit /b 1");
     }
 
-    private static string RunElevatedPowerShell(string script)
+    private static string RunElevatedCommand(string script)
     {
         var dir = Path.Combine(Path.GetTempPath(), "MW3Mod");
         Directory.CreateDirectory(dir);
-        var scriptPath = Path.Combine(dir, "network.ps1");
+        var scriptPath = Path.Combine(dir, "network.cmd");
         var logPath = Path.Combine(dir, "network.log");
         File.WriteAllText(scriptPath, script, new UTF8Encoding(false));
         if (File.Exists(logPath)) File.Delete(logPath);
 
+        var comspec = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe";
         var info = new ProcessStartInfo
         {
-            FileName = "powershell.exe",
-            Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{scriptPath}\" *> \"{logPath}\"",
+            FileName = comspec,
+            Arguments = $"/d /c \"\"{scriptPath}\" > \"{logPath}\" 2>&1\"",
             UseShellExecute = true,
             Verb = "runas",
             CreateNoWindow = true,
