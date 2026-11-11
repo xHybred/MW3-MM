@@ -17,23 +17,6 @@ internal static class NetworkTools
 
     internal static string GameExe(string gameDir) => Path.Combine(gameDir, "iw5sp.exe");
 
-    internal static string? SteamExe()
-    {
-        foreach (var hive in new[] { Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryHive.LocalMachine })
-        {
-            try
-            {
-                using var key = Microsoft.Win32.RegistryKey.OpenBaseKey(hive, Microsoft.Win32.RegistryView.Registry64)
-                    .OpenSubKey(@"SOFTWARE\Valve\Steam");
-                if (key?.GetValue("SteamExe") is string path && File.Exists(path)) return path;
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
-            {
-            }
-        }
-        return null;
-    }
-
     internal sealed record LocalNetwork(IPAddress Address, IPAddress Gateway, string Adapter, NetworkInterfaceType Type);
 
     internal static LocalNetwork? FindLocalNetwork()
@@ -281,24 +264,16 @@ internal static class NetworkTools
         var game = GameExe(gameDir);
         if (!File.Exists(game)) throw new InvalidOperationException("iw5sp.exe was not found. Set the game folder first.");
 
-        var steam = SteamExe();
         var script = new StringBuilder();
         script.AppendLine("@echo off");
         AppendRule(script, "MW3 Mod Manager iw5sp in", "in", game);
         AppendRule(script, "MW3 Mod Manager iw5sp out", "out", game);
-        if (steam is not null)
-        {
-            AppendRule(script, "MW3 Mod Manager Steam in", "in", steam);
-            AppendRule(script, "MW3 Mod Manager Steam out", "out", steam);
-        }
         script.AppendLine("echo OK");
 
         var result = RunElevatedCommand(script.ToString());
         if (!result.Contains("OK", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("The firewall command did not finish. " + result.Trim());
-        return steam is null
-            ? "Firewall: allowed iw5sp.exe inbound and outbound."
-            : "Firewall: allowed iw5sp.exe and Steam inbound and outbound.";
+        return "Firewall: allowed iw5sp.exe inbound and outbound.";
     }
 
     private static void AppendRule(StringBuilder script, string name, string direction, string program)
